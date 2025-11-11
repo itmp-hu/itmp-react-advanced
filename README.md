@@ -1,4 +1,4 @@
-![itmp-react-advanced](assest/itmp-react-advanced.png)
+![itmp-react-advanced](assets/itmp-react-advanced.png)
 
 # Haladó szintű React fejlesztés
 
