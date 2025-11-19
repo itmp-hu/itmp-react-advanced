@@ -1,0 +1,67 @@
+{
+  "version": 6,
+  "environments": [
+    {
+      "id": "1b53ba19-cdf6-4e40-a8cc-785f5797fe15",
+      "name": "SkillShare Academy Env 1",
+      "variables": {
+        "f29d7397-71c4-473b-a574-e039dadd65e0": {
+          "createdAt": "2025-08-17T00:10:21.042+02:00",
+          "name": "xApiToken",
+          "value": "alice_token_123456789abcdef",
+          "enabled": true,
+          "private": false
+        },
+        "baa26416-18d8-4d2b-9394-73c04144a9d0": {
+          "createdAt": "2025-08-17T00:10:21.042+02:00",
+          "name": "baseUrl",
+          "value": "https://cXX-solution.ssa.skillsit.hu/api/v1",
+          "enabled": true,
+          "private": false
+        },
+        "291b279e-7ac0-49d7-b14b-06d213090565": {
+          "createdAt": "2025-08-17T00:10:21.042+02:00",
+          "name": "",
+          "value": "",
+          "enabled": true,
+          "private": false
+        },
+        "a8554e96-2cb7-46ce-8894-ed8420619c0f": {
+          "createdAt": "2025-08-17T00:10:21.042+02:00",
+          "name": "validToken",
+          "value": "henry_token_aaabbbcccdddeee",
+          "enabled": true,
+          "private": false
+        },
+        "3aee41c0-e2ff-4928-be47-ce4eb3c542bd": {
+          "createdAt": "2025-08-17T00:10:21.042+02:00",
+          "name": "validToken2",
+          "value": "carol_token_456789123abcdef",
+          "enabled": true,
+          "private": false
+        },
+        "f5f1fbe4-e42c-4100-aa7e-e9fd5a598699": {
+          "createdAt": "2025-08-17T00:10:21.042+02:00",
+          "name": "invalidToken",
+          "value": "grace_token_555666777888999",
+          "enabled": true,
+          "private": false
+        },
+        "f6938c5f-5c26-43ab-ab86-7a2c717b8a24": {
+          "createdAt": "2025-08-19T15:31:32.516+02:00",
+          "name": "",
+          "value": "",
+          "enabled": true,
+          "private": false
+        },
+        "f242a849-93a4-42c1-a911-e1a20a6b111a": {
+          "createdAt": "2025-08-19T15:31:32.516+02:00",
+          "name": "validToken3",
+          "value": "david_token_789123456defabc",
+          "enabled": true,
+          "private": false
+        }
+      }
+    }
+  ]
+}

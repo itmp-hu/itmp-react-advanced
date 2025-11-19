@@ -1,0 +1,673 @@
+{
+    "version": 6,
+    "entities": [
+        {
+            "entity": {
+                "type": "Project",
+                "id": "b39df2fe-711d-4f42-a2f1-f800e1721c4c",
+                "name": "SkillShare Academy API"
+            },
+            "children": [
+                {
+                    "entity": {
+                        "type": "Request",
+                        "method": {
+                            "requestBody": true,
+                            "link": "http://tools.ietf.org/html/rfc7231#section-4.3.3",
+                            "name": "POST"
+                        },
+                        "body": {
+                            "formBody": {
+                                "overrideContentType": true,
+                                "encoding": "application/x-www-form-urlencoded",
+                                "items": []
+                            },
+                            "bodyType": "Text",
+                            "textBody": "{\n  \"email\": \"user@example19.com\",\n  \"password\": \"password123\",\n  \"name\": \"John Doe\"\n}"
+                        },
+                        "uri": {
+                            "query": {
+                                "delimiter": "&",
+                                "items": []
+                            },
+                            "host": "${\"baseUrl\"}",
+                            "path": "/users/register"
+                        },
+                        "id": "256dd07e-e318-4eed-8535-040ba6cc72ab",
+                        "name": "01 POST Users - Register",
+                        "headers": [
+                            {
+                                "enabled": true,
+                                "name": "Content-Type",
+                                "value": "application/json; charset=utf-8"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "entity": {
+                        "type": "Request",
+                        "method": {
+                            "requestBody": true,
+                            "link": "http://tools.ietf.org/html/rfc7231#section-4.3.3",
+                            "name": "POST"
+                        },
+                        "body": {
+                            "formBody": {
+                                "overrideContentType": true,
+                                "encoding": "application/x-www-form-urlencoded",
+                                "items": []
+                            },
+                            "bodyType": "Text",
+                            "textBody": "{\n  \"email\": \"user@example9.com\",\n  \"password\": \"password123\"\n}"
+                        },
+                        "uri": {
+                            "query": {
+                                "delimiter": "&",
+                                "items": []
+                            },
+                            "host": "${\"baseUrl\"}",
+                            "path": "/users/login"
+                        },
+                        "id": "8e0938b9-e85a-44ab-a78c-90a0d73725b7",
+                        "name": "02 POST Users - Login",
+                        "headers": [
+                            {
+                                "enabled": true,
+                                "name": "Content-Type",
+                                "value": "application/json; charset=utf-8"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "entity": {
+                        "type": "Request",
+                        "method": {
+                            "requestBody": true,
+                            "link": "http://tools.ietf.org/html/rfc7231#section-4.3.3",
+                            "name": "POST"
+                        },
+                        "body": {
+                            "formBody": {
+                                "overrideContentType": true,
+                                "encoding": "application/x-www-form-urlencoded",
+                                "items": []
+                            },
+                            "bodyType": "Text",
+                            "textBody": "{\n  \"email\": \"user@example9.com\",\n  \"password\": \"password1232\"\n}"
+                        },
+                        "uri": {
+                            "query": {
+                                "delimiter": "&",
+                                "items": []
+                            },
+                            "host": "${\"baseUrl\"}",
+                            "path": "/users/login"
+                        },
+                        "id": "24aad7ff-5507-427b-b4d1-504d491d76cd",
+                        "name": "03 POST Users - Login with wrong credentials",
+                        "headers": [
+                            {
+                                "enabled": true,
+                                "name": "Content-Type",
+                                "value": "application/json; charset=utf-8"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "entity": {
+                        "type": "Request",
+                        "method": {
+                            "link": "http://tools.ietf.org/html/rfc7231#section-4.3.1",
+                            "name": "GET"
+                        },
+                        "body": {
+                            "formBody": {
+                                "overrideContentType": true,
+                                "encoding": "application/x-www-form-urlencoded",
+                                "items": []
+                            },
+                            "bodyType": "Text",
+                            "textBody": ""
+                        },
+                        "uri": {
+                            "query": {
+                                "delimiter": "&",
+                                "items": []
+                            },
+                            "host": "${\"baseUrl\"}",
+                            "path": "/users/me"
+                        },
+                        "id": "8708c13e-4027-4e37-8c60-6a1eb758204d",
+                        "name": "04 GET Users - Me",
+                        "headers": [
+                            {
+                                "enabled": true,
+                                "name": "X-API-TOKEN",
+                                "value": "${\"validToken\"}"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "entity": {
+                        "type": "Request",
+                        "method": {
+                            "requestBody": true,
+                            "link": "http://tools.ietf.org/html/rfc7231#section-4.3.3",
+                            "name": "POST"
+                        },
+                        "body": {
+                            "formBody": {
+                                "overrideContentType": true,
+                                "encoding": "application/x-www-form-urlencoded",
+                                "items": []
+                            },
+                            "bodyType": "Text",
+                            "textBody": ""
+                        },
+                        "uri": {
+                            "query": {
+                                "delimiter": "&",
+                                "items": []
+                            },
+                            "host": "${\"baseUrl\"}",
+                            "path": "/users/logout"
+                        },
+                        "id": "e98b4260-5142-4070-8088-03e8e87a1db5",
+                        "name": "05 POST Users - Logout",
+                        "headers": [
+                            {
+                                "enabled": true,
+                                "name": "X-API-TOKEN",
+                                "value": "${\"validToken2\"}"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "entity": {
+                        "type": "Request",
+                        "method": {
+                            "link": "http://tools.ietf.org/html/rfc7231#section-4.3.1",
+                            "name": "GET"
+                        },
+                        "body": {
+                            "formBody": {
+                                "overrideContentType": true,
+                                "encoding": "application/x-www-form-urlencoded",
+                                "items": []
+                            },
+                            "bodyType": "Text"
+                        },
+                        "uri": {
+                            "query": {
+                                "delimiter": "&",
+                                "items": []
+                            },
+                            "host": "${\"baseUrl\"}",
+                            "path": "/courses"
+                        },
+                        "id": "cb6b5bc9-a599-4264-9a5e-aa39e375f59e",
+                        "name": "06 GET Courses",
+                        "headers": [
+                            {
+                                "enabled": true,
+                                "name": "X-API-TOKEN",
+                                "value": "${\"validToken\"}"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "entity": {
+                        "type": "Request",
+                        "method": {
+                            "link": "http://tools.ietf.org/html/rfc7231#section-4.3.1",
+                            "name": "GET"
+                        },
+                        "body": {
+                            "formBody": {
+                                "overrideContentType": true,
+                                "encoding": "application/x-www-form-urlencoded",
+                                "items": []
+                            },
+                            "bodyType": "Text"
+                        },
+                        "uri": {
+                            "query": {
+                                "delimiter": "&",
+                                "items": []
+                            },
+                            "host": "${\"baseUrl\"}",
+                            "path": "/courses"
+                        },
+                        "id": "19fda415-b161-458d-ad3c-ea6c7cfc5427",
+                        "name": "07 GET Courses with invalid token",
+                        "headers": [
+                            {
+                                "enabled": true,
+                                "name": "X-API-TOKEN",
+                                "value": "${\"invalidToken\"}"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "entity": {
+                        "type": "Request",
+                        "method": {
+                            "link": "http://tools.ietf.org/html/rfc7231#section-4.3.1",
+                            "name": "GET"
+                        },
+                        "body": {
+                            "formBody": {
+                                "overrideContentType": true,
+                                "encoding": "application/x-www-form-urlencoded",
+                                "items": []
+                            },
+                            "bodyType": "Text"
+                        },
+                        "uri": {
+                            "query": {
+                                "delimiter": "&",
+                                "items": []
+                            },
+                            "host": "${\"baseUrl\"}",
+                            "path": "/courses/1"
+                        },
+                        "id": "3d51a657-7e16-4651-854e-c7ee180dc688",
+                        "name": "08 GET Course by ID",
+                        "headers": [
+                            {
+                                "enabled": true,
+                                "name": "X-API-TOKEN",
+                                "value": "alice_token_123456789abcdef"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "entity": {
+                        "type": "Request",
+                        "method": {
+                            "link": "http://tools.ietf.org/html/rfc7231#section-4.3.1",
+                            "name": "GET"
+                        },
+                        "body": {
+                            "formBody": {
+                                "overrideContentType": true,
+                                "encoding": "application/x-www-form-urlencoded",
+                                "items": []
+                            },
+                            "bodyType": "Text"
+                        },
+                        "uri": {
+                            "query": {
+                                "delimiter": "&",
+                                "items": []
+                            },
+                            "host": "${\"baseUrl\"}",
+                            "path": "/courses/404"
+                        },
+                        "id": "4e9236e0-d304-4600-b191-04a2b31c4285",
+                        "name": "09 GET Course by ID Course not Found",
+                        "headers": [
+                            {
+                                "enabled": true,
+                                "name": "X-API-TOKEN",
+                                "value": "alice_token_123456789abcdef"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "entity": {
+                        "type": "Request",
+                        "method": {
+                            "requestBody": true,
+                            "link": "http://tools.ietf.org/html/rfc7231#section-4.3.3",
+                            "name": "POST"
+                        },
+                        "body": {
+                            "formBody": {
+                                "overrideContentType": true,
+                                "encoding": "application/x-www-form-urlencoded",
+                                "items": []
+                            },
+                            "bodyType": "Text"
+                        },
+                        "uri": {
+                            "query": {
+                                "delimiter": "&",
+                                "items": []
+                            },
+                            "host": "${\"baseUrl\"}",
+                            "path": "/courses/1/enroll"
+                        },
+                        "id": "645e943d-1dcc-4e05-a2a8-174a23dfb3fa",
+                        "name": "10 POST Courses - Course Enrollment",
+                        "headers": [
+                            {
+                                "enabled": true,
+                                "name": "X-API-TOKEN",
+                                "value": "${\"validToken3\"}"
+                            },
+                            {
+                                "enabled": true,
+                                "name": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "entity": {
+                        "type": "Request",
+                        "method": {
+                            "requestBody": true,
+                            "link": "http://tools.ietf.org/html/rfc7231#section-4.3.3",
+                            "name": "POST"
+                        },
+                        "body": {
+                            "formBody": {
+                                "overrideContentType": true,
+                                "encoding": "application/x-www-form-urlencoded",
+                                "items": []
+                            },
+                            "bodyType": "Text"
+                        },
+                        "uri": {
+                            "query": {
+                                "delimiter": "&",
+                                "items": []
+                            },
+                            "host": "${\"baseUrl\"}",
+                            "path": "/courses/404/enroll"
+                        },
+                        "id": "7d858481-262e-4517-9665-62b9160c7e72",
+                        "name": "11 POST Courses - Course Enrollment - Course not found",
+                        "headers": [
+                            {
+                                "enabled": true,
+                                "name": "X-API-TOKEN",
+                                "value": "${\"validToken3\"}"
+                            },
+                            {
+                                "enabled": true,
+                                "name": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "entity": {
+                        "type": "Request",
+                        "method": {
+                            "requestBody": true,
+                            "link": "http://tools.ietf.org/html/rfc7231#section-4.3.3",
+                            "name": "POST"
+                        },
+                        "body": {
+                            "formBody": {
+                                "overrideContentType": true,
+                                "encoding": "application/x-www-form-urlencoded",
+                                "items": []
+                            },
+                            "bodyType": "Text"
+                        },
+                        "uri": {
+                            "query": {
+                                "delimiter": "&",
+                                "items": []
+                            },
+                            "host": "${\"baseUrl\"}",
+                            "path": "/courses/1/chapters/1/complete"
+                        },
+                        "id": "c29688bd-01f7-4442-b0ac-a19b91065c80",
+                        "name": "12 POST Courses - Chapter Complete",
+                        "headers": [
+                            {
+                                "enabled": true,
+                                "name": "X-API-TOKEN",
+                                "value": "${\"validToken3\"}"
+                            },
+                            {
+                                "enabled": true,
+                                "name": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "entity": {
+                        "type": "Request",
+                        "method": {
+                            "requestBody": true,
+                            "link": "http://tools.ietf.org/html/rfc7231#section-4.3.3",
+                            "name": "POST"
+                        },
+                        "body": {
+                            "formBody": {
+                                "overrideContentType": true,
+                                "encoding": "application/x-www-form-urlencoded",
+                                "items": []
+                            },
+                            "bodyType": "Text"
+                        },
+                        "uri": {
+                            "query": {
+                                "delimiter": "&",
+                                "items": []
+                            },
+                            "host": "${\"baseUrl\"}",
+                            "path": "/courses/2/chapters/1/complete"
+                        },
+                        "id": "49a6f83a-1140-4ec1-bfe7-7de1ed0a7982",
+                        "name": "13 POST Courses - Chapter Complete - Not enrolled",
+                        "headers": [
+                            {
+                                "enabled": true,
+                                "name": "X-API-TOKEN",
+                                "value": "${\"validToken3\"}"
+                            },
+                            {
+                                "enabled": true,
+                                "name": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "entity": {
+                        "type": "Request",
+                        "method": {
+                            "link": "http://tools.ietf.org/html/rfc7231#section-4.3.1",
+                            "name": "GET"
+                        },
+                        "body": {
+                            "formBody": {
+                                "overrideContentType": true,
+                                "encoding": "application/x-www-form-urlencoded",
+                                "items": []
+                            },
+                            "bodyType": "Text"
+                        },
+                        "uri": {
+                            "query": {
+                                "delimiter": "&",
+                                "items": []
+                            },
+                            "host": "${\"baseUrl\"}",
+                            "path": "/mentors/sessions"
+                        },
+                        "id": "f0e2bc5a-4d60-42bc-8402-73916a488945",
+                        "name": "14 GET Mentor Sessions",
+                        "headers": [
+                            {
+                                "enabled": true,
+                                "name": "X-API-TOKEN",
+                                "value": "${\"validToken3\"}"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "entity": {
+                        "type": "Request",
+                        "method": {
+                            "requestBody": true,
+                            "link": "http://tools.ietf.org/html/rfc7231#section-4.3.3",
+                            "name": "POST"
+                        },
+                        "body": {
+                            "formBody": {
+                                "overrideContentType": true,
+                                "encoding": "application/x-www-form-urlencoded",
+                                "items": []
+                            },
+                            "bodyType": "Text"
+                        },
+                        "uri": {
+                            "query": {
+                                "delimiter": "&",
+                                "items": []
+                            },
+                            "host": "${\"baseUrl\"}",
+                            "path": "/mentors/sessions/7/book"
+                        },
+                        "id": "e82303a2-0b98-4877-9302-817e2267769e",
+                        "name": "15 POST Mentor Sessions - Book a mentor session",
+                        "headers": [
+                            {
+                                "enabled": true,
+                                "name": "X-API-TOKEN",
+                                "value": "${\"validToken3\"}"
+                            },
+                            {
+                                "enabled": true,
+                                "name": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "entity": {
+                        "type": "Request",
+                        "method": {
+                            "requestBody": true,
+                            "link": "http://tools.ietf.org/html/rfc7231#section-4.3.3",
+                            "name": "POST"
+                        },
+                        "body": {
+                            "formBody": {
+                                "overrideContentType": true,
+                                "encoding": "application/x-www-form-urlencoded",
+                                "items": []
+                            },
+                            "bodyType": "Text"
+                        },
+                        "uri": {
+                            "query": {
+                                "delimiter": "&",
+                                "items": []
+                            },
+                            "host": "${\"baseUrl\"}",
+                            "path": "/mentors/sessions/10/book"
+                        },
+                        "id": "a64607a1-d418-493d-9049-ed06f8fa4a52",
+                        "name": "16 POST Mentor Sessions - Book a mentor session - Insufficient credits",
+                        "headers": [
+                            {
+                                "enabled": true,
+                                "name": "X-API-TOKEN",
+                                "value": "${\"validToken3\"}"
+                            },
+                            {
+                                "enabled": true,
+                                "name": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "entity": {
+                        "type": "Request",
+                        "method": {
+                            "requestBody": true,
+                            "link": "http://tools.ietf.org/html/rfc7231#section-4.3.3",
+                            "name": "POST"
+                        },
+                        "body": {
+                            "formBody": {
+                                "overrideContentType": true,
+                                "encoding": "application/x-www-form-urlencoded",
+                                "items": []
+                            },
+                            "bodyType": "Text"
+                        },
+                        "uri": {
+                            "query": {
+                                "delimiter": "&",
+                                "items": []
+                            },
+                            "host": "${\"baseUrl\"}",
+                            "path": "/mentors/sessions/1/book"
+                        },
+                        "id": "97040919-85ba-410d-a22c-ab7972d7c247",
+                        "name": "17 POST Mentor Sessions - Book a mentor session - Session not available",
+                        "headers": [
+                            {
+                                "enabled": true,
+                                "name": "X-API-TOKEN",
+                                "value": "${\"validToken3\"}"
+                            },
+                            {
+                                "enabled": true,
+                                "name": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "entity": {
+                        "type": "Request",
+                        "method": {
+                            "requestBody": true,
+                            "link": "http://tools.ietf.org/html/rfc7231#section-4.3.3",
+                            "name": "POST"
+                        },
+                        "body": {
+                            "formBody": {
+                                "overrideContentType": true,
+                                "encoding": "application/x-www-form-urlencoded",
+                                "items": []
+                            },
+                            "bodyType": "Text",
+                            "textBody": ""
+                        },
+                        "uri": {
+                            "query": {
+                                "delimiter": "&",
+                                "items": []
+                            },
+                            "host": "${\"baseUrl\"}",
+                            "path": "/control/reset"
+                        },
+                        "id": "ff3b94d3-f5b9-4565-b34a-bfbd044f9e79",
+                        "name": "18 POST Control - Reset Database",
+                        "headers": []
+                    }
+                }
+            ]
+        }
+    ]
+}

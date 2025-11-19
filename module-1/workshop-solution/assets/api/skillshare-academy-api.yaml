@@ -1,0 +1,608 @@
+openapi: 3.0.3
+info:
+  title: SkillShare Academy API
+  description: REST API for the SkillShare Academy learning platform
+  version: 1.0.0
+  contact:
+    name: SkillShare Academy
+    email: support@skillshare-academy.com
+
+servers:
+  - url: http://localhost/api/v1
+    description: Local development server
+
+security:
+  - ApiTokenAuth: []
+
+paths:
+  /users/register:
+    post:
+      tags:
+        - User Management
+      summary: Register a new user
+      description: Register a new user. New users have 0 credits by default. An email address must be unique.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserRegistration"
+      responses:
+        "201":
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserRegistrationResponse"
+        "400":
+          description: Failed to register user (email already taken)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "Failed to register user"
+
+  /users/login:
+    post:
+      tags:
+        - User Management
+      summary: Login with email and password
+      description: Login with email and password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserLogin"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Invalid email or password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "Invalid email or password"
+
+  /users/logout:
+    post:
+      tags:
+        - User Management
+      summary: Logout the current user
+      description: Logout the current user. Sets the revoked_at field of the user's token to the current time.
+      responses:
+        "200":
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+              example:
+                message: "Logout successful"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /users/me:
+    get:
+      tags:
+        - User Management
+      summary: Get user statistics and progress information
+      description: Get user statistics and progress information
+      responses:
+        "200":
+          description: User dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDashboard"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /courses:
+    get:
+      tags:
+        - Course Management
+      summary: Get a list of all available courses
+      description: Get a list of all available courses with user enrollment status
+      responses:
+        "200":
+          description: List of courses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseList"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /courses/{id}:
+    get:
+      tags:
+        - Course Management
+      summary: Get detailed information about a specific course
+      description: Get detailed information about a specific course with chapter details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Course ID
+      responses:
+        "200":
+          description: Course details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseDetails"
+        "404":
+          description: Course not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "Course not found"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /courses/{id}/enroll:
+    post:
+      tags:
+        - Course Management
+      summary: Enroll the current user in a course
+      description: Enroll the current user in a course
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Course ID
+      responses:
+        "200":
+          description: Successfully enrolled in course
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+              example:
+                message: "Successfully enrolled in course"
+        "404":
+          description: Course not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "Course not found"
+        "409":
+          description: Already enrolled in this course
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "Already enrolled in this course"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /courses/{courseId}/chapters/{chapterId}/complete:
+    post:
+      tags:
+        - Course Management
+      summary: Mark a chapter as completed and earn credits
+      description: Mark a chapter as completed and earn credits
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Course ID
+        - name: chapterId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Chapter ID
+      responses:
+        "200":
+          description: Chapter completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChapterCompletionResponse"
+        "403":
+          description: Not enrolled in this course
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "Not enrolled in this course"
+        "409":
+          description: Chapter already completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "Chapter already completed"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /mentors/sessions:
+    get:
+      tags:
+        - Mentor Sessions
+      summary: Get available mentor sessions
+      description: Get available mentor sessions
+      responses:
+        "200":
+          description: List of available mentor sessions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MentorSessionList"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /mentors/sessions/{id}/book:
+    post:
+      tags:
+        - Mentor Sessions
+      summary: Book a mentor session
+      description: Book a mentor session
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Session ID
+      responses:
+        "200":
+          description: Session booked successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionBookingResponse"
+        "403":
+          description: Insufficient credits
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "Insufficient credits"
+        "409":
+          description: Session not available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "Session not available"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+components:
+  securitySchemes:
+    ApiTokenAuth:
+      type: apiKey
+      in: header
+      name: X-API-TOKEN
+
+  responses:
+    UnauthorizedError:
+      description: Invalid token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            message: "Invalid token"
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Error message
+      required:
+        - message
+
+    SuccessResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Success message
+      required:
+        - message
+
+    UserRegistration:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: User email address
+        password:
+          type: string
+          description: User password
+        name:
+          type: string
+          description: User full name
+      required:
+        - email
+        - password
+        - name
+
+    UserRegistrationResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        user:
+          type: object
+          properties:
+            id:
+              type: integer
+            email:
+              type: string
+            name:
+              type: string
+            credits:
+              type: integer
+      required:
+        - message
+        - user
+
+    UserLogin:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    LoginResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        user:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            email:
+              type: string
+            credits:
+              type: integer
+        token:
+          type: string
+      required:
+        - message
+        - user
+        - token
+
+    UserDashboard:
+      type: object
+      properties:
+        user:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            email:
+              type: string
+            creditBalance:
+              type: integer
+        stats:
+          type: object
+          properties:
+            enrolledCourses:
+              type: integer
+            completedChapters:
+              type: integer
+            totalCreditsEarned:
+              type: integer
+            upcomingBookings:
+              type: integer
+        recentActivity:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                enum: [chapter_completed, session_booked]
+              description:
+                type: string
+              creditsEarned:
+                type: integer
+                nullable: true
+              creditsPaid:
+                type: integer
+                nullable: true
+              timestamp:
+                type: string
+                format: date-time
+      required:
+        - user
+        - stats
+        - recentActivity
+
+    CourseList:
+      type: object
+      properties:
+        courses:
+          type: array
+          items:
+            $ref: "#/components/schemas/Course"
+      required:
+        - courses
+
+    Course:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        difficulty:
+          type: string
+          enum: [beginner, intermediate, advanced]
+        totalChapters:
+          type: integer
+        totalCredits:
+          type: integer
+        isEnrolled:
+          type: boolean
+      required:
+        - id
+        - title
+        - description
+        - difficulty
+        - totalChapters
+        - totalCredits
+        - isEnrolled
+
+    CourseDetails:
+      type: object
+      properties:
+        course:
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/Course"
+            - type: object
+              properties:
+                chapters:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/Chapter"
+              required:
+                - chapters
+      required:
+        - course
+
+    Chapter:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        credits:
+          type: integer
+        isCompleted:
+          type: boolean
+      required:
+        - id
+        - title
+        - description
+        - credits
+        - isCompleted
+
+    ChapterCompletionResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        creditsEarned:
+          type: integer
+        newBalance:
+          type: integer
+      required:
+        - message
+        - creditsEarned
+        - newBalance
+
+    MentorSessionList:
+      type: object
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/MentorSession"
+      required:
+        - sessions
+
+    MentorSession:
+      type: object
+      properties:
+        id:
+          type: integer
+        mentorName:
+          type: string
+        expertise:
+          type: string
+        experienceLevel:
+          type: string
+          enum: [junior, mid, senior]
+        sessionDate:
+          type: string
+          format: date-time
+        durationMinutes:
+          type: integer
+        creditCost:
+          type: integer
+        isAvailable:
+          type: boolean
+      required:
+        - id
+        - mentorName
+        - expertise
+        - experienceLevel
+        - sessionDate
+        - durationMinutes
+        - creditCost
+        - isAvailable
+
+    SessionBookingResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        booking:
+          type: object
+          properties:
+            id:
+              type: integer
+            sessionId:
+              type: integer
+            status:
+              type: string
+              enum: [pending, confirmed, rejected, completed, cancelled]
+            creditsPaid:
+              type: integer
+            bookedAt:
+              type: string
+              format: date-time
+      required:
+        - message
+        - booking
