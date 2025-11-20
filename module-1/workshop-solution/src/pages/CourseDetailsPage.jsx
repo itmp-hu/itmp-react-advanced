@@ -9,7 +9,7 @@ function CourseDetailsPage() {
           <p>Kreditek: 0/50</p>
         </div>
       </div>
-      
+
       <div className="chapters-list">
         <h2>Fejezetek</h2>
         <div className="chapter-item">
@@ -19,9 +19,7 @@ function CourseDetailsPage() {
             <button className="btn btn-secondary" disabled>
               Fejezet megtekintése
             </button>
-            <button className="btn btn-primary">
-              Befejezettnek jelölés
-            </button>
+            <button className="btn btn-primary">Befejezettnek jelölés</button>
           </div>
         </div>
       </div>

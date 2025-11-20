@@ -5,9 +5,11 @@ function DashboardPage() {
       <div className="dashboard-content">
         <div className="welcome-section">
           <h2>Üdvözöllek a SkillShare Academy-n!</h2>
-          <p>Jelenlegi kreditek: <strong>0</strong></p>
+          <p>
+            Jelenlegi kreditek: <strong>0</strong>
+          </p>
         </div>
-        
+
         <div className="stats-section">
           <div className="stat-card">
             <h3>Beiratkozott kurzusok</h3>
@@ -18,13 +20,15 @@ function DashboardPage() {
             <p className="stat-number">0</p>
           </div>
         </div>
-        
+
         <div className="charts-section">
           <div className="chart-placeholder">
             <p>Kredit gyűjtés grafikon (Chart.js) - később implementáljuk</p>
           </div>
           <div className="chart-placeholder">
-            <p>Kurzus előrehaladás grafikon (Chart.js) - később implementáljuk</p>
+            <p>
+              Kurzus előrehaladás grafikon (Chart.js) - később implementáljuk
+            </p>
           </div>
         </div>
       </div>

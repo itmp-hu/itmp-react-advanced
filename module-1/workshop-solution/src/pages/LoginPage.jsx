@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useEffect } from "react";
 
 function LoginPage() {
@@ -18,11 +18,12 @@ function LoginPage() {
     localStorage.setItem("token", "test-token-1234567890");
     navigate("/dashboard");
   };
+
   return (
     <div className="page login-page">
       <div className="login-container">
         <h1>Bejelentkezés</h1>
-        <p>SkillShare Academy tanulási platform!</p>
+        <p>SkillShare Academy tanulási platform</p>
         <form className="login-form" onSubmit={handleLogin}>
           <div className="form-group">
             <label htmlFor="email">Email cím</label>

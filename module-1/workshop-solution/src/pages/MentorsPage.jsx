@@ -2,7 +2,7 @@ function MentorsPage() {
   return (
     <div className="page mentors-page">
       <h1>Mentor foglalás</h1>
-      
+
       <div className="mentors-section">
         <h2>Elérhető mentorok</h2>
         <div className="mentor-card">
@@ -16,7 +16,7 @@ function MentorsPage() {
           </div>
         </div>
       </div>
-      
+
       <div className="sessions-section">
         <h2>Elérhető időpontok</h2>
         <div className="session-card">
@@ -26,7 +26,7 @@ function MentorsPage() {
           <button className="btn btn-primary">Foglalás</button>
         </div>
       </div>
-      
+
       <div className="booked-sessions">
         <h2>Foglalt időpontjaim</h2>
         <p>Még nincs foglalt időpontod.</p>

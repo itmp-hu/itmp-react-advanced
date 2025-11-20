@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useEffect } from "react";
 
 function RegisterPage() {
@@ -39,7 +39,11 @@ function RegisterPage() {
           </div>
           <div className="form-group">
             <label htmlFor="confirmPassword">Jelszó megerősítése</label>
-            <input type="password" id="confirmPassword" placeholder="Jelszó újra" />
+            <input
+              type="password"
+              id="confirmPassword"
+              placeholder="Jelszó újra"
+            />
           </div>
           <button type="submit" className="btn btn-primary">
             Regisztráció

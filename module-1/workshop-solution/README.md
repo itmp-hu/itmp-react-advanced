@@ -1,16 +1,91 @@
-# React + Vite
+# SkillShare Academy - Module 1 Solution
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Ez a mappa tartalmazza az 1. modul végállapotát, amely a 2. modul kiindulópontja.
 
-Currently, two official plugins are available:
+## Telepítés
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+```bash
+npm install
+```
 
-## React Compiler
+## Futtatás
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm run dev
+```
 
-## Expanding the ESLint configuration
+Az alkalmazás elérhető lesz: `http://localhost:5173`
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Tesztelés
+
+### Bejelentkezés tesztelése:
+
+1. Nyisd meg: `http://localhost:5173`
+2. Automatikusan átirányít a login oldalra (mivel nincs token)
+3. Kattints a "Bejelentkezés" gombra
+4. Teszt token kerül beállításra, átirányít a dashboard-ra
+
+### Védett route-ok tesztelése:
+
+- Próbáld meg közvetlenül megnyitni: `http://localhost:5173/dashboard`
+- Az `authMiddleware` ellenőrzi a tokent
+- Ha nincs token, átirányít a login oldalra
+
+### Navigáció tesztelése:
+
+- Dashboard, Kurzusok, Mentorok menüpontok működnek
+- NavLink automatikusan jelzi az aktív oldalt
+- Kijelentkezés törli a tokent és visszairányít
+
+## Implementált funkciók
+
+✅ React Router v7 Data Router minta
+✅ Middleware-alapú hitelesítés (`authMiddleware`)
+✅ Nested route-ok (`children`)
+✅ 6 oldal: Login, Register, Dashboard, Courses, Course Details, Mentors
+✅ Layout komponens Outlet-tel
+✅ Navigation komponens NavLink-ekkel
+✅ Alap CSS stílusok
+✅ Védett route-ok middleware-rel
+
+## Projekt struktúra
+
+```
+src/
+├── components/
+│   ├── Layout.jsx
+│   └── Navigation.jsx
+├── middleware/
+│   └── authMiddleware.js
+├── pages/
+│   ├── LoginPage.jsx
+│   ├── RegisterPage.jsx
+│   ├── DashboardPage.jsx
+│   ├── CoursesPage.jsx
+│   ├── CourseDetailsPage.jsx
+│   └── MentorsPage.jsx
+├── contexts/ (később)
+├── hooks/ (később)
+├── services/ (később)
+├── App.jsx
+├── main.jsx
+└── index.css
+```
+
+## Következő lépések (Modul 2)
+
+A 2. modulban hozzá fogjuk adni:
+
+- Loaders - adatbetöltés a komponens renderelése előtt
+- Actions - form kezelés beépített újratöltéssel
+- AuthContext - globális állapotkezelés
+- API integráció - valódi backend hívások
+- Validáció - form mezők ellenőrzése
+
+## Megjegyzések
+
+- A token most lokálisan tárolódik (`localStorage`)
+- Login és Register most csak teszt tokent állítanak be
+- A 2. modulban valódi API hívásokkal helyettesítjük ezeket
+- Chart.js-t és LinkedIn widget-et később integrálunk
+
