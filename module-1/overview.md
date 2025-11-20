@@ -445,51 +445,50 @@ async function loggingMiddleware({ request }) {
 
 ### Automatikus átirányítás login után
 
-Ha valaki be van jelentkezve és megpróbálja elérni a login oldalt, érdemes automatikusan átirányítani a dashboard-ra. Ezt is middleware-rel oldhatjuk meg:
+Ha valaki be van jelentkezve és megpróbálja elérni a login oldalt, érdemes automatikusan átirányítani a dashboard-ra. Ezt is ajánlott middleware-rel megoldani, de most az egyszerűsítés kedvéért a komponensben oldjuk meg:
 
 ```jsx
-import { redirect } from "react-router";
+import { useNavigate } from "react-router";
+import { useEffect } from "react";
 
-// Middleware: Ha már be van jelentkezve, irányítsa át a dashboard-ra
-async function redirectIfAuthenticatedMiddleware({ request }) {
-  const token = localStorage.getItem("token");
-
-  if (token) {
-    throw redirect("/dashboard");
-  }
-}
-
-// Route definíció
-const router = createBrowserRouter([
-  {
-    path: "/login",
-    element: <LoginPage />,
-    middleware: [redirectIfAuthenticatedMiddleware],
-  },
-  {
-    path: "/register",
-    element: <RegisterPage />,
-    middleware: [redirectIfAuthenticatedMiddleware],
-  },
-]);
-```
-
-**Alternatív megoldás komponensben (egyszerűbb):**
-
-Ha nem szeretnél külön middleware-t írni erre, használhatod a `useEffect` hook-ot:
-
-```jsx
 function LoginPage() {
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
     if (token) {
       navigate("/dashboard");
     }
-  }, [token, navigate]);
+  }, [navigate]);
 
-  return <div>Login form...</div>;
+  return (
+    <div>
+      <h1>Bejelentkezés</h1>
+      {/* Login form... */}
+    </div>
+  );
+}
+```
+
+Ugyanígy működik a `RegisterPage` komponensben is:
+
+```jsx
+function RegisterPage() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      navigate("/dashboard");
+    }
+  }, [navigate]);
+
+  return (
+    <div>
+      <h1>Regisztráció</h1>
+      {/* Registration form... */}
+    </div>
+  );
 }
 ```
 
@@ -830,27 +829,17 @@ async function authMiddleware({ request }) {
   }
 }
 
-// Middleware: Bejelentkezettek átirányítása
-async function redirectIfAuthenticatedMiddleware({ request }) {
-  const token = localStorage.getItem("token");
-
-  if (token) {
-    throw redirect("/dashboard");
-  }
-}
-
 // Router konfiguráció
 const router = createBrowserRouter([
   // Nyilvános route-ok (login, register)
+  // Az átirányítás a komponensekben van kezelve (useEffect)
   {
     path: "/login",
     element: <LoginPage />,
-    middleware: [redirectIfAuthenticatedMiddleware],
   },
   {
     path: "/register",
     element: <RegisterPage />,
-    middleware: [redirectIfAuthenticatedMiddleware],
   },
 
   // Védett route-ok (Layout wrapper-rel)

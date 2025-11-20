@@ -1,15 +1,17 @@
 # 1. modul workshop - Projekt bevezetés, alapstruktúra és routing
 
 - React projekt inicializálása Vite-tal
-- React Router telepítése és konfigurálása
+- React Router v7 telepítése és konfigurálása
+- Data Router minta beállítása
 - Projekt struktúra kialakítása
 - Oldalkomponensek létrehozása
 - Layout és navigáció implementálása
-- Védett route-ok beállítása
+- Middleware-alapú hitelesítés beállítása
+- Védett route-ok implementálása
 
 > [!NOTE]  
 > **Feladat:**  
-> Hozz létre egy React projektet Vite-tal, alakítsd ki a SkillShare Academy alapstruktúráját, implementálj többoldalas navigációt React Router segítségével, és állítsd be a védett route-okat. A modul végére egy működő, navigálható alkalmazás vázzal kell rendelkezned, amely készen áll a következő modulok fejlesztéseire.
+> Hozz létre egy React projektet Vite-tal, alakítsd ki a SkillShare Academy alapstruktúráját, implementálj többoldalas navigációt React Router v7 Data Router alkalmazásával, és állítsd be a middleware-alapú hitelesítést. A modul végére egy működő, navigálható alkalmazás vázzal kell rendelkezned, amely készen áll a következő modulok fejlesztéseire.
 
 <hr />
 
@@ -31,17 +33,6 @@ node --version
 npm --version
 git --version
 ```
-
-### Backend indítása
-
-A gyakorlat során szükséged lesz a SkillShare Academy backend API-ra. Győződj meg róla, hogy a backend fut:
-
-1. Nyisd meg a `assets/backend-solution` mappát
-2. Futtasd: `docker compose up -d`
-3. Ellenőrizd: `http://localhost:5000/api/v1/health`
-
-> [!TIP]
-> Ha a backend nem elérhető, kérd a mentorod segítségét!
 
 ## 1. lépés - React projekt inicializálása
 
@@ -112,34 +103,34 @@ export default App;
 
 ### Router telepítése
 
-Telepítsd a React Router DOM könyvtárat:
+Telepítsd a React Router könyvtárat:
 
 ```bash
-npm install react-router-dom
+npm install react-router
 ```
 
-### BrowserRouter beállítása
+> [!NOTE]
+> React Router v7-ben a `react-router` csomag tartalmazza az összes szükséges funkciót. A `react-router-dom` már nem szükséges!
+
+### Main.jsx egyszerűsítése
 
 Módosítsd a `src/main.jsx` fájlt:
 
 ```jsx
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
 import App from "./App.jsx";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    <App />
   </React.StrictMode>
 );
 ```
 
 > [!TIP]
-> A `BrowserRouter` egy wrapper komponens, amely lehetővé teszi a React Router használatát az alkalmazásban.
+> A Data Router mintával a router konfiguráció az `App.jsx` fájlban lesz, nem a `main.jsx`-ben.
 
 ## 3. lépés - Projekt struktúra kialakítása
 
@@ -151,6 +142,7 @@ Hozd létre a következő mappa struktúrát az `src` mappában:
 src/
 ├── components/
 ├── pages/
+├── middleware/
 ├── contexts/
 ├── hooks/
 ├── services/
@@ -162,6 +154,7 @@ src/
 ```powershell
 New-Item -ItemType Directory -Path src/components
 New-Item -ItemType Directory -Path src/pages
+New-Item -ItemType Directory -Path src/middleware
 New-Item -ItemType Directory -Path src/contexts
 New-Item -ItemType Directory -Path src/hooks
 New-Item -ItemType Directory -Path src/services
@@ -171,7 +164,7 @@ New-Item -ItemType Directory -Path src/styles
 **macOS/Linux terminal:**
 
 ```bash
-mkdir -p src/components src/pages src/contexts src/hooks src/services src/styles
+mkdir -p src/components src/pages src/middleware src/contexts src/hooks src/services src/styles
 ```
 
 ### LinkedIn Share Widget másolása
@@ -194,7 +187,7 @@ Most létrehozzuk az alkalmazás 6 alapvető oldalát.
 Hozz létre egy `src/pages/LoginPage.jsx` fájlt:
 
 ```jsx
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useEffect } from "react";
 
 function LoginPage() {
@@ -254,7 +247,7 @@ export default LoginPage;
 Hozz létre egy `src/pages/RegisterPage.jsx` fájlt:
 
 ```jsx
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useEffect } from "react";
 
 function RegisterPage() {
@@ -490,7 +483,7 @@ export default MentorsPage;
 Hozz létre egy `src/components/Navigation.jsx` fájlt:
 
 ```jsx
-import { NavLink } from "react-router-dom";
+import { NavLink } from "react-router";
 
 function Navigation() {
   // Később ezt az AuthContext-ből fogjuk kiolvasni
@@ -571,7 +564,7 @@ export default Navigation;
 Hozz létre egy `src/components/Layout.jsx` fájlt:
 
 ```jsx
-import { Outlet } from "react-router-dom";
+import { Outlet } from "react-router";
 import Navigation from "./Navigation";
 
 function Layout() {
@@ -596,38 +589,59 @@ export default Layout;
 > [!TIP]
 > Az `Outlet` komponens a React Router speciális komponense, amely a gyermek route-okat jeleníti meg.
 
-### ProtectedRoute komponens létrehozása
+### Middleware létrehozása hitelesítéshez
 
-Hozz létre egy `src/components/ProtectedRoute.jsx` fájlt:
+A React Router v7 middleware funkcióját használjuk a védett route-ok kezelésére. Ez modernebb és tisztább megoldás, mint a wrapper komponensek.
 
-```jsx
-import { Navigate } from "react-router-dom";
+Hozz létre egy `src/middleware/authMiddleware.js` fájlt:
 
-function ProtectedRoute({ children }) {
+```js
+import { redirect } from "react-router";
+
+/**
+ * Middleware a hitelesítés ellenőrzésére
+ * Ha nincs token, átirányít a login oldalra
+ */
+async function authMiddleware({ request }) {
   const token = localStorage.getItem("token");
 
   if (!token) {
     // Ha nincs token, irányítsuk a login oldalra
-    return <Navigate to="/login" replace />;
+    throw redirect("/login");
   }
 
-  // Ha van token, jelenítsd meg az oldalt
-  return children;
+  // Ha van token, a navigáció folytatódik
+  // (Nem kell visszatérési érték)
 }
 
-export default ProtectedRoute;
+export default authMiddleware;
 ```
 
-## 6. lépés - Route-ok beállítása
+> [!TIP]
+> A middleware a komponens renderelése ELŐTT fut le, így hatékonyabb, mint egy wrapper komponens. A `throw redirect()` azonnal leállítja a navigációt és átirányít.
 
-Most összerakjuk az összes komponenst az `App.jsx` fájlban.
+> [!NOTE] > **Miért middleware a ProtectedRoute komponens helyett?**
+>
+> **Előnyök:**
+>
+> - ✅ Központosított logika (egy helyen van a hitelesítés)
+> - ✅ Hatékonyabb (lefut a renderelés előtt)
+> - ✅ Újrafelhasználható (több route-ra is alkalmazható)
+> - ✅ Láncolható (több middleware használható együtt)
+> - ✅ Tisztább kód (nincs szükség wrapper komponensre minden route-nál)
+>
+> A következő modulokban látni fogod, hogy a middleware még erőteljesebb, amikor adatbetöltéssel (loaders) és Context API-val kombinálod!
+
+## 6. lépés - Data Router beállítása
+
+Most összerakjuk az összes komponenst az `App.jsx` fájlban a **Data Router** mintával. Ez a React Router v7 ajánlott megközelítése.
 
 Módosítsd az `src/App.jsx` fájlt:
 
 ```jsx
-import { Routes, Route, Navigate } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Navigate } from "react-router";
 import Layout from "./components/Layout";
-import ProtectedRoute from "./components/ProtectedRoute";
+import authMiddleware from "./middleware/authMiddleware";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -635,73 +649,80 @@ import CoursesPage from "./pages/CoursesPage";
 import CourseDetailsPage from "./pages/CourseDetailsPage";
 import MentorsPage from "./pages/MentorsPage";
 
+// Router konfiguráció objektum-alapú route definíciókkal
+const router = createBrowserRouter([
+  // Nyilvános route-ok (Layout nélkül)
+  // Az átirányítás a komponensekben van kezelve (useEffect)
+  {
+    path: "/login",
+    element: <LoginPage />,
+  },
+  {
+    path: "/register",
+    element: <RegisterPage />,
+  },
+
+  // Védett route-ok (Layout-tal)
+  {
+    path: "/",
+    element: <Layout />,
+    middleware: [authMiddleware], // MINDEN child route védett lesz!
+    children: [
+      {
+        index: true, // Főoldal átirányítás dashboard-ra
+        element: <Navigate to="/dashboard" replace />,
+      },
+      {
+        path: "dashboard",
+        element: <DashboardPage />,
+      },
+      {
+        path: "courses",
+        children: [
+          {
+            index: true,
+            element: <CoursesPage />,
+          },
+          {
+            path: ":id",
+            element: <CourseDetailsPage />,
+          },
+        ],
+      },
+      {
+        path: "mentors",
+        element: <MentorsPage />,
+      },
+    ],
+  },
+
+  // 404 - Not Found
+  {
+    path: "*",
+    element: (
+      <div style={{ padding: "2rem", textAlign: "center" }}>
+        <h1>404 - Az oldal nem található</h1>
+        <a href="/login">Vissza a főoldalra</a>
+      </div>
+    ),
+  },
+]);
+
 function App() {
-  return (
-    <Routes>
-      {/* Nyilvános route-ok Layout nélkül */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-
-      {/* Védett route-ok Layout-tal */}
-      <Route element={<Layout />}>
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <DashboardPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/courses"
-          element={
-            <ProtectedRoute>
-              <CoursesPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/courses/:id"
-          element={
-            <ProtectedRoute>
-              <CourseDetailsPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/mentors"
-          element={
-            <ProtectedRoute>
-              <MentorsPage />
-            </ProtectedRoute>
-          }
-        />
-      </Route>
-
-      {/* Alapértelmezett átirányítás */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
-      {/* 404 - Not Found */}
-      <Route
-        path="*"
-        element={
-          <div style={{ padding: "2rem", textAlign: "center" }}>
-            <h1>404 - Az oldal nem található</h1>
-            <a href="/login">Vissza a főoldalra</a>
-          </div>
-        }
-      />
-    </Routes>
-  );
+  return <RouterProvider router={router} />;
 }
 
 export default App;
 ```
 
-> [!NOTE]
+> [!NOTE] > **Figyeld meg a Data Router előnyeit:**
+>
+> - Központosított route konfiguráció (könnyen áttekinthető)
+> - Middleware a parent route-on → összes child védett lesz
+> - Nested route-ok tisztán látszanak (`children` array)
+> - Objektum-alapú, jobb TypeScript támogatás
+
+> [!TIP]
 > Most már több oldal között tudunk navigálni! Próbáld ki a böngészőben.
 
 ## 7. lépés - Alap stílusok
@@ -1104,14 +1125,16 @@ Most próbáld ki az alkalmazást!
 1. **Navigáció tesztelése:**
 
    - Nyisd meg a böngészőt: `http://localhost:5173`
-   - Átirányít a `/dashboard`-ra, majd mivel nincs token, a `ProtectedRoute` átirányít a `/login` oldalra
+   - Átirányít a `/dashboard`-ra, majd mivel nincs token, az `authMiddleware` átirányít a `/login` oldalra
    - Kattints a "Regisztrálj ingyen!" linkre → átirányít a `/register` oldalra
    - Kattints vissza a "Jelentkezz be!" linkre → vissza a login-ra
 
-2. **Védett route-ok tesztelése:**
+2. **Védett route-ok és middleware tesztelése:**
 
    - Próbáld meg közvetlenül megnyitni: `http://localhost:5173/dashboard`
-   - Mivel nincs token, átirányít a login oldalra
+   - Mivel nincs token, a middleware automatikusan átirányít a login oldalra (a komponens még renderelés előtt!)
+   - Nyisd meg a böngésző Developer Tools-t (F12) → Network tab
+   - Figyeld meg, hogy a middleware miatt nem töltődnek be feleslegesen komponensek
 
 3. **Bejelentkezés tesztelése:**
 
@@ -1138,25 +1161,29 @@ Most próbáld ki az alkalmazást!
 Ebben a modulban elkészítetted:
 
 ✅ Vite + React projekt alapstruktúráját  
-✅ React Router beállítását és működését  
+✅ React Router v7 telepítését és Data Router beállítását  
 ✅ 6 oldal komponenst (Login, Register, Dashboard, Courses, Course Details, Mentors)  
 ✅ Layout és Navigation komponenseket  
-✅ ProtectedRoute komponenst a védett oldalakhoz  
+✅ Middleware-t a hitelesítéshez (`authMiddleware`)  
+✅ Védett route-okat middleware-alapú védelemmel  
+✅ Nested route-okat (`children`) a tisztább struktúráért  
 ✅ Alap CSS stílusokat
 
 ### Következő lépések (2. modul)
 
 A következő modulban fogjuk:
 
-- Implementálni a valódi hitelesítést (login/register működőképessé tétele)
+- Implementálni a valódi hitelesítést (login/register API integrációval)
 - Létrehozni az AuthContext-et a globális állapotkezeléshez
 - Készíteni custom hookokat (useAuth, useApi)
+- **Loaders** használata adatok betöltésére (Data Router funkció)
+- **Actions** használata form-ok kezelésére (Data Router funkció)
 - Form validációt hozzáadni
-- API integrációt megkezdeni
+- Teljes API integrációt megvalósítani az összes oldalon
 
 ## Kiegészítő feladatok (ha van időd)
 
-Ha gyorsan végez sz az alapfeladatokkal, próbáld ki ezeket:
+Ha gyorsan végeztél az alapfeladatokkal, próbáld ki ezeket:
 
 1. **Saját stílusok:** Módosítsd a színsémát az `src/index.css` fájlban (`:root` változók)
 
@@ -1164,7 +1191,11 @@ Ha gyorsan végez sz az alapfeladatokkal, próbáld ki ezeket:
 
 3. **Loading komponens:** Hozz létre egy loading spinner komponenst későbbi használatra
 
-4. **Wireframe összehasonlítás:** Nyisd meg a wireframe képeket az `assets/wireframes/` mappából és hasonlítsd össze az általad készített oldalakkal
+4. **Logging middleware:** Készíts egy `loggingMiddleware.js` fájlt, amely console.log-olja a navigációkat, és add hozzá a route-okhoz
+
+5. **Wireframe összehasonlítás:** Nyisd meg a wireframe képeket az `assets/wireframes/` mappából és hasonlítsd össze az általad készített oldalakkal
+
+6. **Middleware láncolás:** Próbáld ki több middleware használatát egyetlen route-on (pl. logging + auth)
 
 > [!NOTE]
 > Jó munkát végeztél! A következő modulban tovább fejlesztjük az alkalmazást.
