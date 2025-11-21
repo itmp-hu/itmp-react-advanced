@@ -1,17 +1,15 @@
-import { createBrowserRouter, RouterProvider, Navigate } from "react-router";
 import Layout from "./components/Layout";
-import authMiddleware from "./middleware/authMiddleware";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
 import CoursesPage from "./pages/CoursesPage";
 import CourseDetailsPage from "./pages/CourseDetailsPage";
 import MentorsPage from "./pages/MentorsPage";
+import { createBrowserRouter, RouterProvider, Navigate } from "react-router";
+import authMiddleware from "./middleware/authMiddleware";
 
-// Router konfiguráció objektum-alapú route definíciókkal
 const router = createBrowserRouter([
   // Nyilvános route-ok (Layout nélkül)
-  // Az átirányítás a komponensekben van kezelve (useEffect)
   {
     path: "/login",
     element: <LoginPage />,
@@ -21,11 +19,11 @@ const router = createBrowserRouter([
     element: <RegisterPage />,
   },
 
-  // Védett route-ok (Layout-tal)
+  // Védett route-ok (Layout-tal) - MÉG NINCS MIDDLEWARE!
   {
     path: "/",
     element: <Layout />,
-    middleware: [authMiddleware], // MINDEN child route védett lesz!
+    middleware: [authMiddleware],
     children: [
       {
         index: true, // Főoldal átirányítás dashboard-ra
@@ -67,9 +65,11 @@ const router = createBrowserRouter([
   },
 ]);
 
+
 function App() {
-  return <RouterProvider router={router} />;
+  return (
+      <RouterProvider router={router} />
+  );
 }
 
 export default App;
-

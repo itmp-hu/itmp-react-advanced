@@ -1,12 +1,13 @@
-import { NavLink } from "react-router";
+import { NavLink, useNavigate } from "react-router";
 
 function Navigation() {
-  // Később ezt az AuthContext-ből fogjuk kiolvasni
+  const navigate = useNavigate();
+
   const token = localStorage.getItem("token");
 
   const handleLogout = () => {
     localStorage.removeItem("token");
-    window.location.href = "/login";
+    navigate("/login");
   };
 
   return (
@@ -16,8 +17,6 @@ function Navigation() {
       </div>
 
       <div className="nav-links">
-        {token ? (
-          <>
             <NavLink
               to="/dashboard"
               className={({ isActive }) =>
@@ -45,31 +44,9 @@ function Navigation() {
             <button onClick={handleLogout} className="btn btn-secondary">
               Kijelentkezés
             </button>
-          </>
-        ) : (
-          <>
-            <NavLink
-              to="/login"
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-            >
-              Bejelentkezés
-            </NavLink>
-            <NavLink
-              to="/register"
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-            >
-              Regisztráció
-            </NavLink>
-          </>
-        )}
-      </div>
+        </div>
     </nav>
   );
 }
 
 export default Navigation;
-

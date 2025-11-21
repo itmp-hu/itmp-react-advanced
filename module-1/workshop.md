@@ -483,15 +483,16 @@ export default MentorsPage;
 Hozz létre egy `src/components/Navigation.jsx` fájlt:
 
 ```jsx
-import { NavLink } from "react-router";
+import { NavLink, useNavigate } from "react-router";
 
 function Navigation() {
-  // Később ezt az AuthContext-ből fogjuk kiolvasni
+  const navigate = useNavigate();
+
   const token = localStorage.getItem("token");
 
   const handleLogout = () => {
     localStorage.removeItem("token");
-    window.location.href = "/login";
+    navigate("/login");
   };
 
   return (
@@ -501,56 +502,33 @@ function Navigation() {
       </div>
 
       <div className="nav-links">
-        {token ? (
-          <>
-            <NavLink
-              to="/dashboard"
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-            >
-              Dashboard
-            </NavLink>
-            <NavLink
-              to="/courses"
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-            >
-              Kurzusok
-            </NavLink>
-            <NavLink
-              to="/mentors"
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-            >
-              Mentorok
-            </NavLink>
-            <button onClick={handleLogout} className="btn btn-secondary">
-              Kijelentkezés
-            </button>
-          </>
-        ) : (
-          <>
-            <NavLink
-              to="/login"
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-            >
-              Bejelentkezés
-            </NavLink>
-            <NavLink
-              to="/register"
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-            >
-              Regisztráció
-            </NavLink>
-          </>
-        )}
+        <NavLink
+          to="/dashboard"
+          className={({ isActive }) =>
+            isActive ? "nav-link active" : "nav-link"
+          }
+        >
+          Dashboard
+        </NavLink>
+        <NavLink
+          to="/courses"
+          className={({ isActive }) =>
+            isActive ? "nav-link active" : "nav-link"
+          }
+        >
+          Kurzusok
+        </NavLink>
+        <NavLink
+          to="/mentors"
+          className={({ isActive }) =>
+            isActive ? "nav-link active" : "nav-link"
+          }
+        >
+          Mentorok
+        </NavLink>
+        <button onClick={handleLogout} className="btn btn-secondary">
+          Kijelentkezés
+        </button>
       </div>
     </nav>
   );
@@ -1194,8 +1172,6 @@ Ha gyorsan végeztél az alapfeladatokkal, próbáld ki ezeket:
 4. **Logging middleware:** Készíts egy `loggingMiddleware.js` fájlt, amely console.log-olja a navigációkat, és add hozzá a route-okhoz
 
 5. **Wireframe összehasonlítás:** Nyisd meg a wireframe képeket az `assets/wireframes/` mappából és hasonlítsd össze az általad készített oldalakkal
-
-6. **Middleware láncolás:** Próbáld ki több middleware használatát egyetlen route-on (pl. logging + auth)
 
 > [!NOTE]
 > Jó munkát végeztél! A következő modulban tovább fejlesztjük az alkalmazást.

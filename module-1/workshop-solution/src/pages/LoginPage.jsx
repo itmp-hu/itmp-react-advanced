@@ -1,20 +1,15 @@
 import { useNavigate } from "react-router";
 import { useEffect } from "react";
-
 function LoginPage() {
   const navigate = useNavigate();
-
-  // Ha már be van jelentkezve, irányítsuk át a dashboard-ra
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
       navigate("/dashboard");
     }
   }, [navigate]);
-
   const handleLogin = (e) => {
     e.preventDefault();
-    // Később itt lesz a valódi API hívás
     localStorage.setItem("token", "test-token-1234567890");
     navigate("/dashboard");
   };
@@ -46,4 +41,3 @@ function LoginPage() {
 }
 
 export default LoginPage;
-

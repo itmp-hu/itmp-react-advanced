@@ -1,6 +1,6 @@
-# SkillShare Academy - Module 1 Solution
+# SkillShare Academy - Workshop Short Start
 
-Ez a mappa tartalmazza az 1. modul végállapotát, amely a 2. modul kiindulópontja.
+Ez a kiinduló projekt a **Module 1 Workshop (Rövid verzió)** gyakorlathoz.
 
 ## Telepítés
 
@@ -8,84 +8,36 @@ Ez a mappa tartalmazza az 1. modul végállapotát, amely a 2. modul kiindulópo
 npm install
 ```
 
-## Futtatás
+## Fejlesztői szerver indítása
 
 ```bash
 npm run dev
 ```
 
-Az alkalmazás elérhető lesz: `http://localhost:5173`
+Megnyílik a `http://localhost:5173` címen.
 
-## Tesztelés
+## Mi van benne?
 
-### Bejelentkezés tesztelése:
+- ✅ Vite + React projekt
+- ✅ Összes oldal komponens **KIVÉVE** a MentorsPage
+- ✅ Layout komponens (üres `<header>` tag)
+- ✅ Teljes CSS stílusok
+- ✅ Projekt struktúra (üres middleware, contexts, hooks, services mappák)
 
-1. Nyisd meg: `http://localhost:5173`
-2. Automatikusan átirányít a login oldalra (mivel nincs token)
-3. Kattints a "Bejelentkezés" gombra
-4. Teszt token kerül beállításra, átirányít a dashboard-ra
+## Mit kell implementálnod?
 
-### Védett route-ok tesztelése:
+1. **MentorsPage komponens**
+2. **React Router v7 Data Router konfiguráció**
+3. **Navigation komponens**
+4. **Layout frissítés** (Navigation hozzáadása)
+5. **authMiddleware**
+6. **Login/Register átirányítások**
 
-- Próbáld meg közvetlenül megnyitni: `http://localhost:5173/dashboard`
-- Az `authMiddleware` ellenőrzi a tokent
-- Ha nincs token, átirányít a login oldalra
-
-### Navigáció tesztelése:
-
-- Dashboard, Kurzusok, Mentorok menüpontok működnek
-- NavLink automatikusan jelzi az aktív oldalt
-- Kijelentkezés törli a tokent és visszairányít
-
-## Implementált funkciók
-
-✅ React Router v7 Data Router minta
-✅ Middleware-alapú hitelesítés (`authMiddleware`)
-✅ Nested route-ok (`children`)
-✅ 6 oldal: Login, Register, Dashboard, Courses, Course Details, Mentors
-✅ Layout komponens Outlet-tel
-✅ Navigation komponens NavLink-ekkel
-✅ Alap CSS stílusok
-✅ Védett route-ok middleware-rel
-
-## Projekt struktúra
-
-```
-src/
-├── components/
-│   ├── Layout.jsx
-│   └── Navigation.jsx
-├── middleware/
-│   └── authMiddleware.js
-├── pages/
-│   ├── LoginPage.jsx
-│   ├── RegisterPage.jsx
-│   ├── DashboardPage.jsx
-│   ├── CoursesPage.jsx
-│   ├── CourseDetailsPage.jsx
-│   └── MentorsPage.jsx
-├── contexts/ (később)
-├── hooks/ (később)
-├── services/ (később)
-├── App.jsx
-├── main.jsx
-└── index.css
-```
-
-## Következő lépések (Modul 2)
-
-A 2. modulban hozzá fogjuk adni:
-
-- Loaders - adatbetöltés a komponens renderelése előtt
-- Actions - form kezelés beépített újratöltéssel
-- AuthContext - globális állapotkezelés
-- API integráció - valódi backend hívások
-- Validáció - form mezők ellenőrzése
+Kövesd a `workshop-short.md` fájlban található utasításokat!
 
 ## Megjegyzések
 
-- A token most lokálisan tárolódik (`localStorage`)
-- Login és Register most csak teszt tokent állítanak be
-- A 2. modulban valódi API hívásokkal helyettesítjük ezeket
-- Chart.js-t és LinkedIn widget-et később integrálunk
+- A React Router **nincs telepítve** - te fogod telepíteni az első feladatban
+- Az App.jsx jelenleg csak a LoginPage-t jeleníti meg statikusan
+- A Layout komponens üres `<header>` taggel rendelkezik
 
