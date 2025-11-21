@@ -428,24 +428,21 @@ A Context API akkor hasznos, amikor **sok komponensnek** kell hozzáférnie ugya
 ```jsx
 // AuthContext.jsx
 import { createContext, useState, useContext } from "react";
+import * as authService from "../services/authService";
 
 // 1. Létrehozzuk a Context-et
 const AuthContext = createContext();
 
 // 2. Provider komponens készítése
 export function AuthProvider({ children }) {
+  const {login}
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem("token"));
 
   const login = async (email, password) => {
     // Login logika...
-    const response = await fetch("/api/v1/users/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
+    const data = await authService.login()
 
-    const data = await response.json();
     setToken(data.token);
     setUser(data.user);
     localStorage.setItem("token", data.token);
@@ -486,11 +483,9 @@ export function useAuth() {
 import { AuthProvider } from "./contexts/AuthContext";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
-  <BrowserRouter>
-    <AuthProvider>
-      <App />
-    </AuthProvider>
-  </BrowserRouter>
+  <AuthProvider>
+    <App />
+  </AuthProvider>
 );
 ```
 
@@ -549,79 +544,15 @@ A **custom hook** egy olyan függvény, amely:
 ### useAuth hook példa
 
 ```jsx
-// hooks/useAuth.js
-import { useState, useEffect } from "react";
-
+// context/AuthContext.jsx
 export function useAuth() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const context = useContext(AuthContext);
 
-  // Token kiolvasása localStorage-ból
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      // User adatok betöltése a token alapján
-      fetchUser(token);
-    } else {
-      setLoading(false);
-    }
-  }, []);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
 
-  const fetchUser = async (token) => {
-    try {
-      const response = await fetch("/api/v1/users/me", {
-        headers: { "X-API-Key": token },
-      });
-      const data = await response.json();
-      setUser(data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const login = async (email, password) => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch("/api/v1/users/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Hibás email vagy jelszó");
-      }
-
-      const data = await response.json();
-      localStorage.setItem("token", data.token);
-      setUser(data.user);
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const logout = () => {
-    localStorage.removeItem("token");
-    setUser(null);
-  };
-
-  return {
-    user,
-    loading,
-    error,
-    login,
-    logout,
-    isAuthenticated: !!user,
-  };
-}
+  return context;
 ```
 
 **Használat komponensben:**
@@ -708,7 +639,7 @@ const [user, setUser] = useLocalStorage("user", null);
 
 ### Biztonság szempontok
 
-**❌ NE tár olj érzékeny adatokat:**
+**❌ NE tárolj érzékeny adatokat:**
 
 - Jelszavakat
 - Hitelkártya adatokat
@@ -721,148 +652,6 @@ const [user, setUser] = useLocalStorage("user", null);
 - UI state
 - Cache-elt adatok
 
-## Hibakezelési stratégiák
-
-### Graceful error handling
-
-**1. Try-catch használata async műveletekhez:**
-
-```jsx
-async function fetchData() {
-  try {
-    const response = await fetch("/api/data");
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error("Hiba történt:", error);
-    throw error; // Továbbdobjuk a hívónak
-  }
-}
-```
-
-**2. Error state kezelése komponensekben:**
-
-```jsx
-function DataComponent() {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    fetchData()
-      .then(setData)
-      .catch(setError)
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) return <div>Betöltés...</div>;
-  if (error) return <div>Hiba: {error.message}</div>;
-  if (!data) return <div>Nincs adat</div>;
-
-  return <div>{/* Adatok megjelenítése */}</div>;
-}
-```
-
-### HTTP status kódok kezelése
-
-```jsx
-async function apiRequest(url, options) {
-  try {
-    const response = await fetch(url, options);
-
-    // 2xx - Sikeres
-    if (response.ok) {
-      return await response.json();
-    }
-
-    // 400 - Bad Request
-    if (response.status === 400) {
-      throw new Error("Hibás kérés. Ellenőrizd az adatokat!");
-    }
-
-    // 401 - Unauthorized
-    if (response.status === 401) {
-      // Átirányítás a login oldalra
-      localStorage.removeItem("token");
-      window.location.href = "/login";
-      throw new Error("Nincs jogosultságod. Jelentkezz be újra!");
-    }
-
-    // 403 - Forbidden
-    if (response.status === 403) {
-      throw new Error("Nincs hozzáférési jogosultságod!");
-    }
-
-    // 404 - Not Found
-    if (response.status === 404) {
-      throw new Error("A keresett tartalom nem található!");
-    }
-
-    // 422 - Unprocessable Entity
-    if (response.status === 422) {
-      const errors = await response.json();
-      throw new Error(`Validációs hiba: ${JSON.stringify(errors)}`);
-    }
-
-    // 500 - Internal Server Error
-    if (response.status === 500) {
-      throw new Error("Szerverhiba történt. Próbáld újra később!");
-    }
-
-    // Egyéb hibák
-    throw new Error(`Váratlan hiba: ${response.status}`);
-  } catch (error) {
-    console.error("API hiba:", error);
-    throw error;
-  }
-}
-```
-
-### Felhasználóbarát hibaüzenetek
-
-**❌ Rossz hibaüzenet:**
-
-```
-Error: Network request failed
-```
-
-**✅ Jó hibaüzenet:**
-
-```
-Nem sikerült csatlakozni a szerverhez. Ellenőrizd az internet kapcsolatot és próbáld újra!
-```
-
-**Hibaüzenet komponens:**
-
-```jsx
-function ErrorMessage({ error, onRetry }) {
-  const getUserFriendlyMessage = (error) => {
-    if (error.message.includes("network")) {
-      return "Nem sikerült csatlakozni a szerverhez";
-    }
-    if (error.message.includes("401")) {
-      return "Lejárt a bejelentkezésed, kérlek jelentkezz be újra";
-    }
-    return "Hiba történt. Kérlek próbáld újra!";
-  };
-
-  return (
-    <div className="error-container">
-      <div className="error-icon">⚠️</div>
-      <p className="error-message">{getUserFriendlyMessage(error)}</p>
-      {onRetry && (
-        <button onClick={onRetry} className="retry-button">
-          Újra próbálom
-        </button>
-      )}
-    </div>
-  );
-}
-```
-
 ## Összefoglalás
 
 A 2. modul gyakorlati részében a következőket fogjuk megvalósítani:
@@ -873,7 +662,6 @@ A 2. modul gyakorlati részében a következőket fogjuk megvalósítani:
 4. ✅ Token tárolás localStorage-ban
 5. ✅ Real-time form validáció
 6. ✅ API integrációAPI (login, register)
-7. ✅ Hibakezelés és user-friendly hibaüzenetek
-8. ✅ Újrafelhasználható form komponensek
+7. ✅ Újrafelhasználható form komponensek
 
 A modul végére egy teljesen működő hitelesítési rendszerrel fogunk rendelkezni, amely Context API-val kezeli a globális állapotot, custom hook-okkal strukturálja a logikát, és professzionális hibakezelést biztosít!

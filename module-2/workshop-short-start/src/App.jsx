@@ -7,7 +7,6 @@ import CourseDetailsPage from "./pages/CourseDetailsPage";
 import MentorsPage from "./pages/MentorsPage";
 import { createBrowserRouter, RouterProvider, Navigate } from "react-router";
 import authMiddleware from "./middleware/authMiddleware";
-import { AuthProvider } from "./contexts/AuthContext";
 
 const router = createBrowserRouter([
   // Nyilvános route-ok (Layout nélkül)
@@ -66,11 +65,10 @@ const router = createBrowserRouter([
   },
 ]);
 
+
 function App() {
   return (
-    <AuthProvider>
       <RouterProvider router={router} />
-    </AuthProvider>
   );
 }
 

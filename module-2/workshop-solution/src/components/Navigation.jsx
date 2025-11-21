@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from "react-router";
 import { useAuth } from "../contexts/AuthContext";
 
 function Navigation() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {

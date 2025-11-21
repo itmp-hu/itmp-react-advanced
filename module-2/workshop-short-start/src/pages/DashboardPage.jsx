@@ -1,17 +1,10 @@
-import { useAuth } from "../contexts/AuthContext";
-
 function DashboardPage() {
-  const { user } = useAuth();
-
   return (
     <div className="page dashboard-page">
       <h1>Dashboard</h1>
       <div className="dashboard-content">
         <div className="welcome-section">
-          <h2>Üdvözöllek a SkillShare Academy-n, {user?.name}!</h2>
-          <p>
-            Email: <strong>{user?.email}</strong>
-          </p>
+          <h2>Üdvözöllek a SkillShare Academy-n!</h2>
           <p>
             Jelenlegi kreditek: <strong>0</strong>
           </p>
@@ -44,3 +37,4 @@ function DashboardPage() {
 }
 
 export default DashboardPage;
+
