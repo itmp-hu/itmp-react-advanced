@@ -1,4 +1,7 @@
 
+import {useEffect} from "react";
+import {useNavigate} from "react-router";
+
 function RegisterPage() {
   const navigate = useNavigate();
   useEffect(() => {
@@ -13,6 +16,7 @@ function RegisterPage() {
     localStorage.setItem("token", "test-token-1234567890");
     alert("Regisztráltál! (Később itt routing lesz)");
     navigate("/dashboard");
+    console.log("Regisztrációs űrlap elküldve");
   };
 
   return (
