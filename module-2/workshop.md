@@ -1,15 +1,16 @@
 # 2. modul workshop - Komponensek és állapotkezelés
 
+- Mocked Auth Service létrehozása
+- Controlled formok és validáció
 - AuthContext implementálása
 - Custom hooks készítése (useAuth)
 - Login és regisztrációs formok validációval
-- API integráció (login, register endpoints)
 - Token kezelés localStorage-ban
 - Hibakezelés és hibaüzenetek
 
 > [!NOTE]  
 > **Feladat:**  
-> Implementálj egy működő hitelesítési rendszert Context API és custom hooks használatával. Készíts form validációt, integráld a backend API-t, és kezelj hibákat user-friendly módon. A modul végére teljesen működő login/register rendszerrel kell rendelkezned, amely globális állapotkezelést használ.
+> Implementálj egy működő hitelesítési rendszert Context API és custom hooks használatával. Készíts form validációt, mock auth service-t, és kezelj hibákat user-friendly módon. A modul végére teljesen működő login/register rendszerrel kell rendelkezned, amely globális állapotkezelést használ. A következő modulban fogjuk bevezetni a valódi API integrációt.
 
 <hr />
 
@@ -17,7 +18,7 @@
 
 ### Kiindulási állapot
 
-A kiindulási állapot az előző modul befejeztő állapota lesz. A saját megoldásod helyett célszerű a `/assets/module-1/workshop-solution` mappába levő projekttel dolgoznod.
+A kiindulási állapot az előző modul befejeztő állapota lesz. A saját megoldásod helyett célszerű a `module-1/workshop-solution` mappába levő projekttel dolgoznod.
 
 Győződj meg róla, hogy az 1. modul befejezett állapotában vagy:
 
@@ -27,272 +28,172 @@ Győződj meg róla, hogy az 1. modul befejezett állapotában vagy:
 ✅ Protected Route implementálva  
 ✅ Alap CSS stílusok működnek
 
-### Backend ellenőrzése
+> [!NOTE]
+> Ebben a modulban **NEM** fogjuk használni a backend API-t. Helyette mock (állapított) szolgáltatásokat fogunk létrehozni a `services/authService.js` fájlban. A valódi API integrációt a 3. modulban fogjuk megvalósítani.
 
-Ellenőrizd, hogy a backend API fut-e:
+## 1. lépés - Mock Auth Service létrehozása
 
-```bash
-# Böngészőben nyisd meg:
-http://localhost:5000/api/v1/health
-```
+Először hozzunk létre egy mock auth service-t, amely szimulálja a backend működését. Ez lehetővé teszi, hogy a frontend funkciókat teszteljük API nélkül.
 
-Ha nem működik:
+### authService.js fájl létrehozása
 
-```bash
-cd assets/backend-solution
-docker compose up -d
-```
+Hozz létre egy `src/services/authService.js` fájlt:
 
-## 1. lépés - AuthContext létrehozása
+```javascript
+// Mock user adatbázis (normális esetben ez a backend-en lenne)
+const MOCK_USERS = [
+  {
+    id: 1,
+    name: "Alice Johnson",
+    email: "alice@example.com",
+    password: "password123",
+    credits: 150,
+    enrolledCoursesCount: 3,
+    completedChaptersCount: 12,
+  },
+  {
+    id: 2,
+    name: "John Doe",
+    email: "john@example.com",
+    password: "password123",
+    credits: 200,
+    enrolledCoursesCount: 5,
+    completedChaptersCount: 25,
+  },
+];
 
-Az AuthContext fogja tárolni a hitelesítési állapotot (user, token) és a hitelesítéssel kapcsolatos műveleteket (login, logout, register).
+// Simulált késleltetés (mintha hálózati kérés lenne)
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-### AuthContext fájl létrehozása
+// Login függvény - szimulálja a backend login endpoint-ot
+export const login = async (email, password) => {
+  await delay(800); // Szimuláljuk a hálózati késleltetést
 
-Hozz létre egy `src/contexts/AuthContext.jsx` fájlt:
+  // Keressük meg a usert
+  const user = MOCK_USERS.find((u) => u.email === email);
 
-```jsx
-import { createContext, useState, useContext, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-
-// 1. Context létrehozása
-const AuthContext = createContext();
-
-// 2. Provider komponens
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-
-  // Alkalmazás indulásakor ellenőrizzük, van-e mentett token
-  useEffect(() => {
-    const savedToken = localStorage.getItem("token");
-    if (savedToken) {
-      setToken(savedToken);
-      // User adatok betöltése a tokennel
-      fetchUserData(savedToken);
-    } else {
-      setLoading(false);
-    }
-  }, []);
-
-  // User adatok lekérése
-  const fetchUserData = async (authToken) => {
-    try {
-      const response = await fetch("http://localhost:5000/api/v1/users/me", {
-        headers: {
-          "X-API-Key": authToken,
-        },
-      });
-
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData);
-      } else {
-        // Token érvénytelen, töröljük
-        localStorage.removeItem("token");
-        setToken(null);
-      }
-    } catch (error) {
-      console.error("Hiba a user adatok betöltésekor:", error);
-      localStorage.removeItem("token");
-      setToken(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Login függvény
-  const login = async (email, password) => {
-    try {
-      const response = await fetch("http://localhost:5000/api/v1/users/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error("Hibás email vagy jelszó");
-        }
-        throw new Error("Hiba a bejelentkezés során");
-      }
-
-      const data = await response.json();
-
-      // Token és user mentése
-      setToken(data.token);
-      setUser(data.user);
-      localStorage.setItem("token", data.token);
-
-      // Átirányítás a dashboard-ra
-      navigate("/dashboard");
-
-      return { success: true };
-    } catch (error) {
-      console.error("Login hiba:", error);
-      throw error;
-    }
-  };
-
-  // Register függvény
-  const register = async (name, email, password) => {
-    try {
-      const response = await fetch(
-        "http://localhost:5000/api/v1/users/register",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ name, email, password }),
-        }
-      );
-
-      if (!response.ok) {
-        if (response.status === 400) {
-          throw new Error("Ez az email cím már használatban van");
-        }
-        throw new Error("Hiba a regisztráció során");
-      }
-
-      const data = await response.json();
-
-      // Regisztráció után átirányítás a login oldalra
-      navigate("/login");
-
-      return {
-        success: true,
-        message: "Sikeres regisztráció! Most már bejelentkezhetsz.",
-      };
-    } catch (error) {
-      console.error("Regisztráció hiba:", error);
-      throw error;
-    }
-  };
-
-  // Logout függvény
-  const logout = async () => {
-    try {
-      // Opcionális: logout API hívás
-      if (token) {
-        await fetch("http://localhost:5000/api/v1/users/logout", {
-          method: "POST",
-          headers: {
-            "X-API-Key": token,
-          },
-        });
-      }
-    } catch (error) {
-      console.error("Logout hiba:", error);
-    } finally {
-      // Token és user törlése
-      setToken(null);
-      setUser(null);
-      localStorage.removeItem("token");
-      navigate("/login");
-    }
-  };
-
-  const value = {
-    user,
-    token,
-    loading,
-    login,
-    register,
-    logout,
-    isAuthenticated: !!token,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-// 3. Custom hook a Context használatához
-export function useAuth() {
-  const context = useContext(AuthContext);
-
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+  // Ha nincs ilyen user
+  if (!user) {
+    throw new Error("Hibás email vagy jelszó");
   }
 
-  return context;
-}
+  // Ha rossz a jelszó
+  if (user.password !== password) {
+    throw new Error("Hibás email vagy jelszó");
+  }
+
+  // Generálunk egy mock tokent
+  const token = `mock-token-${user.id}-${Date.now()}`;
+
+  // Visszaadjuk a user adatokat (jelszó nélkül) és a tokent
+  const { password: _, ...userWithoutPassword } = user;
+
+  return {
+    user: userWithoutPassword,
+    token: token,
+  };
+};
+
+// Register függvény - szimulálja a backend register endpoint-ot
+export const register = async (name, email, password) => {
+  await delay(800); // Szimuláljuk a hálózati késleltetést
+
+  // Ellenőrizzük, hogy létezik-e már ilyen email
+  const existingUser = MOCK_USERS.find((u) => u.email === email);
+
+  if (existingUser) {
+    throw new Error("Ez az email cím már használatban van");
+  }
+
+  // Új user létrehozása
+  const newUser = {
+    id: MOCK_USERS.length + 1,
+    name,
+    email,
+    password,
+    credits: 100, // Kezdő kreditek
+    enrolledCoursesCount: 0,
+    completedChaptersCount: 0,
+  };
+
+  // Mock adatbázishoz hozzáadjuk
+  MOCK_USERS.push(newUser);
+
+  return {
+    success: true,
+    message: "Sikeres regisztráció! Most már bejelentkezhetsz.",
+  };
+};
+
+// Get user by token - szimulálja a backend /users/me endpoint-ot
+export const getUserByToken = async (token) => {
+  await delay(500);
+
+  // Token formátum: mock-token-{userId}-{timestamp}
+  const userId = parseInt(token.split("-")[2]);
+
+  const user = MOCK_USERS.find((u) => u.id === userId);
+
+  if (!user) {
+    throw new Error("Érvénytelen token");
+  }
+
+  const { password: _, ...userWithoutPassword } = user;
+  return userWithoutPassword;
+};
+
+// Logout függvény - szimulálja a backend logout endpoint-ot
+export const logout = async () => {
+  await delay(300);
+  // Mock logout - nincs mit csinálni, a frontend törli a tokent
+  return { success: true };
+};
 ```
 
-> [!TIP]
-> Az AuthContext három fő részből áll:
+> [!TIP] > **Miért használunk mock service-t?**
 >
-> 1. **Context létrehozása** - createContext()
-> 2. **Provider komponens** - Tartalmazza az állapotot és a műveleteket
-> 3. **Custom hook** - Kényelmes hozzáférés a Context-hez
+> - **Fejlesztési sebesség**: Nem kell várni a backend készültségére
+> - **Tesztelhetőség**: Könnyebb tesztelni különböző eseteket
+> - **Offline fejlesztés**: Működik internet nélkül is
+> - **Fokozatos átmenet**: Később egyszerűen lecserélhető valódi API-ra
 
-### AuthProvider beállítása
+## 2. lépés - LoginPage form validáció
 
-Módosítsd az `src/main.jsx` fájlt:
-
-```jsx
-import React from "react";
-import ReactDOM from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
-import { AuthProvider } from "./contexts/AuthContext";
-import App from "./App.jsx";
-import "./index.css";
-
-ReactDOM.createRoot(document.getElementById("root")).render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
-    </BrowserRouter>
-  </React.StrictMode>
-);
-```
-
-> [!NOTE]
-> Az AuthProvider-t a BrowserRouter-en belül kell elhelyezni, mert a useNavigate hook-ot használja!
-
-## 2. lépés - Login oldal működővé tétele
-
-Most frissítsük a LoginPage komponenst, hogy használja az AuthContext-et.
+Most frissítsük a LoginPage komponenst, hogy controlled form-ot használjon validációval, és integráljuk a mock auth service-t.
 
 Módosítsd a `src/pages/LoginPage.jsx` fájlt:
 
 ```jsx
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
+import { Link, useNavigate } from "react-router";
+import { login } from "../services/authService";
 
 function LoginPage() {
+  // Form mezők state-jei (controlled inputs)
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  // Hiba kezelés
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState("");
+
+  // Loading state
   const [loading, setLoading] = useState(false);
 
-  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // Ha már be van jelentkezve, irányítsuk a dashboard-ra
-  useState(() => {
-    if (isAuthenticated) {
-      navigate("/dashboard");
-    }
-  }, [isAuthenticated, navigate]);
-
-  // Form validáció
+  // Client-side form validáció
   const validateForm = () => {
     const newErrors = {};
 
+    // Email validáció
     if (!email) {
       newErrors.email = "Az email cím kötelező";
     } else if (!/\S+@\S+\.\S+/.test(email)) {
       newErrors.email = "Érvénytelen email formátum";
     }
 
+    // Jelszó validáció
     if (!password) {
       newErrors.password = "A jelszó kötelező";
     } else if (password.length < 6) {
@@ -303,7 +204,7 @@ function LoginPage() {
     return newErrors;
   };
 
-  // Form elküldés
+  // Form elküldés kezelése
   const handleSubmit = async (e) => {
     e.preventDefault();
     setServerError("");
@@ -315,11 +216,17 @@ function LoginPage() {
       return;
     }
 
-    // Login API hívás
+    // Login API hívás (mock service)
     setLoading(true);
     try {
-      await login(email, password);
-      // A navigate már az AuthContext-ben van kezelve
+      const { user, token } = await login(email, password);
+
+      // Token mentése localStorage-ba
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+
+      // Sikeres login után átirányítás
+      navigate("/dashboard");
     } catch (error) {
       setServerError(error.message);
     } finally {
@@ -388,6 +295,23 @@ function LoginPage() {
         <p className="register-link">
           Még nincs fiókod? <Link to="/register">Regisztrálj ingyen!</Link>
         </p>
+
+        <div
+          style={{
+            marginTop: "2rem",
+            padding: "1rem",
+            backgroundColor: "#f0f9ff",
+            borderRadius: "0.5rem",
+          }}
+        >
+          <p style={{ fontSize: "0.875rem", color: "#0369a1" }}>
+            <strong>Teszt bejelentkezés:</strong>
+            <br />
+            Email: alice@example.com vagy john@example.com
+            <br />
+            Jelszó: password123
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -432,14 +356,47 @@ Add hozzá az `src/index.css` fájl végéhez:
 }
 ```
 
-## 3. lépés - Registration oldal működővé tétele
+> [!NOTE] > **Controlled vs Uncontrolled Inputs:**
+>
+> - **Controlled**: Az input értéke state-ben van tárolva (`value={email}`)
+> - **Uncontrolled**: Az input saját DOM state-jét használja
+> - Mi controlled input-okat használunk, mert így könnyebb validálni és kezelni
+
+### Tesztelés
+
+Most próbáld ki a login form-ot:
+
+1. **Hibás esetek tesztelése:**
+
+   - Hagyd üresen az email mezőt → "Az email cím kötelező"
+   - Írj be érvénytelen emailt (pl. "test") → "Érvénytelen email formátum"
+   - Hagyd üresen a jelszó mezőt → "A jelszó kötelező"
+   - Írj be rövid jelszót (pl. "123") → "Legalább 6 karakter"
+
+2. **Rossz jelszó tesztelése:**
+
+   ```
+   Email: alice@example.com
+   Jelszó: wrongpassword
+   ```
+
+   → "Hibás email vagy jelszó" üzenet
+
+3. **Sikeres login:**
+   ```
+   Email: alice@example.com
+   Jelszó: password123
+   ```
+   → Átirányít a dashboard-ra
+
+## 3. lépés - RegisterPage implementálása
 
 Módosítsd a `src/pages/RegisterPage.jsx` fájlt:
 
 ```jsx
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
+import { Link, useNavigate } from "react-router";
+import { register } from "../services/authService";
 
 function RegisterPage() {
   const [name, setName] = useState("");
@@ -451,13 +408,7 @@ function RegisterPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const { register, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-
-  // Ha már be van jelentkezve, irányítsuk a dashboard-ra
-  if (isAuthenticated) {
-    navigate("/dashboard");
-  }
 
   const validateForm = () => {
     const newErrors = {};
@@ -502,7 +453,7 @@ function RegisterPage() {
       return;
     }
 
-    // Register API hívás
+    // Register API hívás (mock service)
     setLoading(true);
     try {
       const result = await register(name, email, password);
@@ -540,7 +491,6 @@ function RegisterPage() {
               value={name}
               onChange={(e) => {
                 setName(e.target.value);
-                // Töröljük a hibaüzenetet, ha a user módosítja a mezőt
                 if (errors.name) {
                   setErrors((prev) => ({ ...prev, name: "" }));
                 }
@@ -561,7 +511,6 @@ function RegisterPage() {
               value={email}
               onChange={(e) => {
                 setEmail(e.target.value);
-                // Töröljük a hibaüzenetet, ha a user módosítja a mezőt
                 if (errors.email) {
                   setErrors((prev) => ({ ...prev, email: "" }));
                 }
@@ -582,7 +531,6 @@ function RegisterPage() {
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);
-                // Töröljük a hibaüzenetet, ha a user módosítja a mezőt
                 if (errors.password) {
                   setErrors((prev) => ({ ...prev, password: "" }));
                 }
@@ -605,7 +553,6 @@ function RegisterPage() {
               value={confirmPassword}
               onChange={(e) => {
                 setConfirmPassword(e.target.value);
-                // Töröljük a hibaüzenetet, ha a user módosítja a mezőt
                 if (errors.confirmPassword) {
                   setErrors((prev) => ({ ...prev, confirmPassword: "" }));
                 }
@@ -635,22 +582,462 @@ function RegisterPage() {
 export default RegisterPage;
 ```
 
-## 4. lépés - Navigation frissítése
+## 4. lépés - AuthContext létrehozása
 
-Frissítsük a Navigation komponenst, hogy az AuthContext-et használja:
+Most hozzunk létre az AuthContext-et, amely a mock service-t használja és globális állapotkezelést biztosít.
+
+Hozz létre egy `src/contexts/AuthContext.jsx` fájlt:
+
+```jsx
+import { createContext, useState, useContext, useEffect } from "react";
+import * as authService from "../services/authService";
+
+// 1. Context létrehozása
+const AuthContext = createContext();
+
+// 2. Provider komponens
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Alkalmazás indulásakor ellenőrizzük, van-e mentett token
+  useEffect(() => {
+    const savedToken = localStorage.getItem("token");
+    const savedUser = localStorage.getItem("user");
+
+    if (savedToken && savedUser) {
+      setToken(savedToken);
+      setUser(JSON.parse(savedUser));
+    }
+
+    setLoading(false);
+  }, []);
+
+  // Login függvény
+  const login = async (email, password) => {
+    try {
+      const { user, token } = await authService.login(email, password);
+
+      // Token és user mentése
+      setToken(token);
+      setUser(user);
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+
+      return { success: true };
+    } catch (error) {
+      console.error("Login hiba:", error);
+      throw error;
+    }
+  };
+
+  // Register függvény
+  const register = async (name, email, password) => {
+    try {
+      const result = await authService.register(name, email, password);
+      return result;
+    } catch (error) {
+      console.error("Regisztráció hiba:", error);
+      throw error;
+    }
+  };
+
+  // Logout függvény
+  const logout = async () => {
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error("Logout hiba:", error);
+    } finally {
+      // Token és user törlése
+      setToken(null);
+      setUser(null);
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+    }
+  };
+
+  const value = {
+    user,
+    token,
+    loading,
+    login,
+    register,
+    logout,
+    isAuthenticated: !!token,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+// 3. Custom hook a Context használatához
+export function useAuth() {
+  const context = useContext(AuthContext);
+
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+
+  return context;
+}
+```
+
+> [!TIP] > **Az AuthContext három fő részből áll:**
+>
+> 1. **Context létrehozása** - `createContext()`
+> 2. **Provider komponens** - Tartalmazza az állapotot és a műveleteket
+> 3. **Custom hook** - `useAuth()` - Kényelmes hozzáférés a Context-hez
+>
+> **Fontos:** Az AuthContext **NEM** használ `useNavigate`-et! A navigációt a page komponensek kezelik, mert:
+>
+> - Az AuthProvider az App.jsx-ben wrap-eli a RouterProvider-t
+> - Így az AuthContext kívül van a routing context-en
+> - A tiszta szeparáció jobb: auth logic ≠ navigation logic
+
+### Main.jsx egyszerűsítése
+
+Módosítsd az `src/main.jsx` fájlt - NEM kell BrowserRouter:
+
+```jsx
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App.jsx";
+import "./index.css";
+
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+```
+
+> [!NOTE]
+> A Data Router mintával **NEM** használunk `BrowserRouter`-t a main.jsx-ben. A routing context-et a `RouterProvider` biztosítja.
+
+### App.jsx és AuthProvider beállítása
+
+Most konfiguráljuk az App.jsx-et a Data Router mintával és AuthProvider-rel.
+
+Módosítsd az `src/App.jsx` fájlt:
+
+```jsx
+import { createBrowserRouter, RouterProvider, Navigate } from "react-router";
+import { AuthProvider } from "./contexts/AuthContext";
+import Layout from "./components/Layout";
+import authMiddleware from "./middleware/authMiddleware";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import DashboardPage from "./pages/DashboardPage";
+import CoursesPage from "./pages/CoursesPage";
+import CourseDetailsPage from "./pages/CourseDetailsPage";
+import MentorsPage from "./pages/MentorsPage";
+
+// Router konfiguráció objektum-alapú route definíciókkal
+const router = createBrowserRouter([
+  // Nyilvános route-ok (Layout nélkül)
+  {
+    path: "/login",
+    element: <LoginPage />,
+  },
+  {
+    path: "/register",
+    element: <RegisterPage />,
+  },
+
+  // Védett route-ok (Layout-tal)
+  {
+    path: "/",
+    element: <Layout />,
+    middleware: [authMiddleware],
+    children: [
+      {
+        index: true,
+        element: <Navigate to="/dashboard" replace />,
+      },
+      {
+        path: "dashboard",
+        element: <DashboardPage />,
+      },
+      {
+        path: "courses",
+        children: [
+          {
+            index: true,
+            element: <CoursesPage />,
+          },
+          {
+            path: ":id",
+            element: <CourseDetailsPage />,
+          },
+        ],
+      },
+      {
+        path: "mentors",
+        element: <MentorsPage />,
+      },
+    ],
+  },
+
+  // 404 - Not Found
+  {
+    path: "*",
+    element: (
+      <div style={{ padding: "2rem", textAlign: "center" }}>
+        <h1>404 - Az oldal nem található</h1>
+        <a href="/login">Vissza a főoldalra</a>
+      </div>
+    ),
+  },
+]);
+
+function App() {
+  return (
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
+  );
+}
+
+export default App;
+```
+
+> [!NOTE] > **Miért ez a struktúra?**
+>
+> - `AuthProvider` wrap-eli a `RouterProvider`-t
+> - A `RouterProvider` biztosítja a routing context-et (NEM kell BrowserRouter!)
+> - Az AuthContext **NEM** használ `useNavigate`-et (kívül van a routing context-en)
+> - A page komponensek (LoginPage, RegisterPage, Navigation) kezelik a navigációt
+> - Ez tiszta szeparációt biztosít: auth logic ≠ navigation logic
+
+## 5. lépés - Login és Register oldalak frissítése AuthContext-tel
+
+Most frissítsük a Login és Register oldalakat, hogy az AuthContext-et használják.
+
+### LoginPage frissítése
+
+Módosítsd a `src/pages/LoginPage.jsx` fájlt:
+
+```jsx
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router";
+import { useAuth } from "../contexts/AuthContext";
+
+function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const { login, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  // Ha már be van jelentkezve, irányítsuk a dashboard-ra
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, navigate]);
+
+  // Form validáció
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!email) {
+      newErrors.email = "Az email cím kötelező";
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = "Érvénytelen email formátum";
+    }
+
+    if (!password) {
+      newErrors.password = "A jelszó kötelező";
+    } else if (password.length < 6) {
+      newErrors.password =
+        "A jelszónak legalább 6 karakter hosszúnak kell lennie";
+    }
+
+    return newErrors;
+  };
+
+  // Form elküldés
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setServerError("");
+
+    // Validáció
+    const validationErrors = validateForm();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    // Login API hívás (mock service az AuthContext-en keresztül)
+    setLoading(true);
+    try {
+      await login(email, password);
+      // Sikeres login után navigáció a komponensben!
+      navigate("/dashboard");
+    } catch (error) {
+      setServerError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="page login-page">
+      <div className="login-container">
+        <h1>Bejelentkezés</h1>
+        <p>SkillShare Academy tanulási platform</p>
+
+        {serverError && <div className="alert alert-error">{serverError}</div>}
+
+        <form className="login-form" onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label htmlFor="email">Email cím</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (errors.email) {
+                  setErrors((prev) => ({ ...prev, email: "" }));
+                }
+              }}
+              className={errors.email ? "input-error" : ""}
+              placeholder="email@példa.hu"
+              disabled={loading}
+            />
+            {errors.email && <span className="error-text">{errors.email}</span>}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="password">Jelszó</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (errors.password) {
+                  setErrors((prev) => ({ ...prev, password: "" }));
+                }
+              }}
+              className={errors.password ? "input-error" : ""}
+              placeholder="Jelszó"
+              disabled={loading}
+            />
+            {errors.password && (
+              <span className="error-text">{errors.password}</span>
+            )}
+          </div>
+
+          <button type="submit" className="btn btn-primary" disabled={loading}>
+            {loading ? "Bejelentkezés..." : "Bejelentkezés"}
+          </button>
+        </form>
+
+        <p className="register-link">
+          Még nincs fiókod? <Link to="/register">Regisztrálj ingyen!</Link>
+        </p>
+
+        <div
+          style={{
+            marginTop: "2rem",
+            padding: "1rem",
+            backgroundColor: "#f0f9ff",
+            borderRadius: "0.5rem",
+          }}
+        >
+          <p style={{ fontSize: "0.875rem", color: "#0369a1" }}>
+            <strong>Teszt bejelentkezés:</strong>
+            <br />
+            Email: alice@example.com vagy john@example.com
+            <br />
+            Jelszó: password123
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default LoginPage;
+```
+
+### RegisterPage frissítése
+
+Módosítsd a `src/pages/RegisterPage.jsx` fájlt:
+
+- Importáld a `useAuth`-ot az AuthContext-ből
+- A `register` függvény már az AuthContext-ből jön
+- **Fontos:** A `handleSubmit`-ben a `navigate("/login")` hívást BENT kell hagyni, mert a regisztráció után a komponens kezeli a navigációt (nem az AuthContext)!
+
+```jsx
+import { useState } from "react";
+import { Link, useNavigate } from "react-router";
+import { useAuth } from "../contexts/AuthContext";
+
+function RegisterPage() {
+  // ... (state-ek)
+
+  const { register, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  // Ha már be van jelentkezve, irányítsuk a dashboard-ra
+  if (isAuthenticated) {
+    navigate("/dashboard");
+  }
+
+  // ... (validateForm)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    // ... (validáció)
+
+    setLoading(true);
+    try {
+      const result = await register(name, email, password);
+      setSuccessMessage(result.message);
+      // 2 másodperc után átirányítás - a komponensben!
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
+    } catch (error) {
+      setServerError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ... (JSX return)
+}
+```
+
+## 6. lépés - User név megjelenítése Dashboard és Courses oldalon
+
+### Navigation frissítése
+
+Frissítsük a Navigation komponenst, hogy megjelenítse a bejelentkezett user nevét:
 
 Módosítsd a `src/components/Navigation.jsx` fájlt:
 
 ```jsx
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router";
 import { useAuth } from "../contexts/AuthContext";
 
 function Navigation() {
   const { user, isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (window.confirm("Biztosan ki szeretnél jelentkezni?")) {
-      logout();
+      await logout();
+      navigate("/login"); // Navigáció a komponensben történik!
     }
   };
 
@@ -661,59 +1048,36 @@ function Navigation() {
       </div>
 
       <div className="nav-links">
-        {isAuthenticated ? (
-          <>
-            <span className="user-greeting">
-              Szia, {user?.name || "Felhasználó"}!
-            </span>
-            <NavLink
-              to="/dashboard"
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-            >
-              Dashboard
-            </NavLink>
-            <NavLink
-              to="/courses"
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-            >
-              Kurzusok
-            </NavLink>
-            <NavLink
-              to="/mentors"
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-            >
-              Mentorok
-            </NavLink>
-            <button onClick={handleLogout} className="btn btn-secondary">
-              Kijelentkezés
-            </button>
-          </>
-        ) : (
-          <>
-            <NavLink
-              to="/login"
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-            >
-              Bejelentkezés
-            </NavLink>
-            <NavLink
-              to="/register"
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-            >
-              Regisztráció
-            </NavLink>
-          </>
-        )}
+        <span className="user-greeting">
+          Szia, {user?.name || "Felhasználó"}!
+        </span>
+        <NavLink
+          to="/dashboard"
+          className={({ isActive }) =>
+            isActive ? "nav-link active" : "nav-link"
+          }
+        >
+          Dashboard
+        </NavLink>
+        <NavLink
+          to="/courses"
+          className={({ isActive }) =>
+            isActive ? "nav-link active" : "nav-link"
+          }
+        >
+          Kurzusok
+        </NavLink>
+        <NavLink
+          to="/mentors"
+          className={({ isActive }) =>
+            isActive ? "nav-link active" : "nav-link"
+          }
+        >
+          Mentorok
+        </NavLink>
+        <button onClick={handleLogout} className="btn btn-secondary">
+          Kijelentkezés
+        </button>
       </div>
     </nav>
   );
@@ -733,71 +1097,7 @@ Add hozzá az `src/index.css`-hez:
 }
 ```
 
-## 5. lépés - ProtectedRoute frissítése
-
-Frissítsük a ProtectedRoute-ot, hogy az AuthContext loading állapotát kezelje:
-
-Módosítsd a `src/components/ProtectedRoute.jsx` fájlt:
-
-```jsx
-import { Navigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
-
-function ProtectedRoute({ children }) {
-  const { isAuthenticated, loading } = useAuth();
-
-  // Loading állapot kezelése
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="spinner"></div>
-        <p>Betöltés...</p>
-      </div>
-    );
-  }
-
-  // Ha nincs bejelentkezve, irányítsuk a login oldalra
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // Ha be van jelentkezve, jelenítsd meg az oldalt
-  return children;
-}
-
-export default ProtectedRoute;
-```
-
-Loading spinner stílus hozzáadása az `src/index.css`-hez:
-
-```css
-/* Loading spinner */
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 400px;
-  gap: 1rem;
-}
-
-.spinner {
-  width: 48px;
-  height: 48px;
-  border: 4px solid var(--border-color);
-  border-top-color: var(--primary-color);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-```
-
-## 6. lépés - Dashboard frissítése
+### DashboardPage frissítése
 
 Frissítsük a Dashboard-ot, hogy megjelenítse a user adatait:
 
@@ -855,6 +1155,72 @@ function DashboardPage() {
 export default DashboardPage;
 ```
 
+### CoursesPage frissítése
+
+Módosítsd a `src/pages/CoursesPage.jsx` fájlt, hogy megjelenítse a user nevét:
+
+```jsx
+import { useAuth } from "../contexts/AuthContext";
+
+function CoursesPage() {
+  const { user } = useAuth();
+
+  return (
+    <div className="page courses-page">
+      <h1>Kurzusok</h1>
+
+      <p style={{ marginBottom: "2rem", color: "var(--secondary-color)" }}>
+        Helló {user?.name}! Itt láthatod az elérhető kurzusokat.
+      </p>
+
+      <div className="courses-filters">
+        <input type="text" placeholder="Keresés..." />
+        <select>
+          <option>Minden kategória</option>
+          <option>Frontend</option>
+          <option>Backend</option>
+          <option>DevOps</option>
+        </select>
+      </div>
+
+      <div className="courses-grid">
+        <div className="course-card">
+          <h3>React alapok</h3>
+          <p>Tanuld meg a React alapjait</p>
+          <div className="course-meta">
+            <span>12 fejezet</span>
+            <span>6 óra</span>
+          </div>
+          <button className="btn btn-primary">Részletek</button>
+        </div>
+
+        <div className="course-card">
+          <h3>Node.js haladó</h3>
+          <p>Haladó backend fejlesztés</p>
+          <div className="course-meta">
+            <span>15 fejezet</span>
+            <span>8 óra</span>
+          </div>
+          <button className="btn btn-primary">Részletek</button>
+        </div>
+
+        <div className="course-card">
+          <h3>TypeScript mesteri szint</h3>
+          <p>Típusbiztos kód írása</p>
+          <div className="course-meta">
+            <span>10 fejezet</span>
+            <span>5 óra</span>
+          </div>
+          <button className="btn btn-primary">Részletek</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default CoursesPage;
+```
+
 ## Tesztelés
 
 Most teszteljük le az új hitelesítési rendszert!
@@ -888,7 +1254,7 @@ Most teszteljük le az új hitelesítési rendszert!
 1. **Próbálj bejelentkezni hibás jelszóval:**
 
    ```
-   Email: test@example.com
+   Email: alice@example.com
    Jelszó: wrongpassword
    ```
 
@@ -897,16 +1263,17 @@ Most teszteljük le az új hitelesítési rendszert!
 2. **Jelentkezz be a helyes adatokkal:**
 
    ```
-   Email: test@example.com
+   Email: alice@example.com
    Jelszó: password123
    ```
 
 3. **Ellenőrizd:**
    - Sikeres bejelentkezés
    - Átirányít a Dashboard-ra
-   - A navigációban látszik a neved: "Szia, Teszt Felhasználó!"
+   - A navigációban látszik a neved: "Szia, Alice Johnson!"
    - Látható a Dashboard, Kurzusok, Mentorok link
-   - A Dashboard megjelenít i a user adatokat
+   - A Dashboard megjelenít a user adatokat (név, email, kreditek)
+   - A Kurzusok oldalon is látszik a neved
 
 ### 3. Protected Routes tesztelése
 
@@ -938,6 +1305,7 @@ Most teszteljük le az új hitelesítési rendszert!
 5. **Ellenőrizd:**
 
    - Látható a `token` kulcs az értékkel
+   - Látható a `user` kulcs JSON formátumban
 
 6. **Töröld a tokent a Local Storage-ból**
 7. **Frissítsd az oldalt**
@@ -945,16 +1313,23 @@ Most teszteljük le az új hitelesítési rendszert!
    - Kijelentkezik
    - Átirányít a login oldalra
 
-### 6. Adatbázisban létező user tesztelése
+### 6. Mock user-ek tesztelése
 
-A backend adatbázisában előre léteznek userek (jelszó mindenhol: `password123`):
+A mock service-ben két előre létező user van:
 
 ```
-Email: john.doe@skillshare.com
+Email: alice@example.com
+Név: Alice Johnson
 Jelszó: password123
+Kreditek: 150
+
+Email: john@example.com
+Név: John Doe
+Jelszó: password123
+Kreditek: 200
 ```
 
-Próbálj meg ezzel bejelentkezni és ellenőrizd, hogy működik!
+Próbálj meg mindkettővel bejelentkezni és ellenőrizd, hogy különböző adatokat jelenít meg!
 
 ## Hibakeresés
 
@@ -965,49 +1340,54 @@ Ha valami nem működik:
 - Nyisd meg a DevTools-t (F12) → Console
 - Nézd meg, van-e hibaüzenet
 
-**2. Network tab ellenőrzése:**
-
-- DevTools (F12) → Network
-- Nézd meg a login/register API hívásokat
-- Ellenőrizd a status code-ot és a response-t
-
-**3. Gyakori hibák:**
+**2. Gyakori hibák:**
 
 ❌ **"useAuth must be used within AuthProvider"**  
-→ Az AuthProvider nincs elhelyezve a main.jsx-ben
+→ Az AuthProvider nincs elhelyezve az App.jsx-ben (wrap-elnie kell a RouterProvider-t)
 
 ❌ **"Cannot read property 'name' of null"**  
 → A user még null, használj optional chaining-et: `user?.name`
 
-❌ **"Failed to fetch"**  
-→ A backend nem fut, indítsd el: `docker compose up -d`
+❌ **"useNavigate must be called inside a Router"**  
+→ A navigáció a page komponensekben történik (nem az AuthContext-ben!)
 
-❌ **"401 Unauthorized" minden kérésnél**  
-→ A token nem kerül elküldésre, ellenőrizd az X-API-Key header-t
+❌ **"Login nem működik"**  
+→ Ellenőrizd a konzolt, nézd meg a mock service-t, és hogy a navigáció a komponensben van-e
 
 ## Összefoglalás
 
 Ebben a modulban elkészítetted:
 
+✅ **Mock Auth Service** - Szimulálja a backend viselkedését  
+✅ **Controlled formok** - Validációval és hibakezeléssel  
 ✅ **AuthContext** - Globális hitelesítési állapotkezelés  
-✅ **useAuth hook** - Kényelmes hozzáférés az auth funkciókhhoz  
+✅ **useAuth hook** - Kényelmes hozzáférés az auth funkciókhoz  
 ✅ **Login form** - Validációval és hibakezeléssel  
 ✅ **Register form** - Komplex validációval (jelszó egyezés)  
 ✅ **Token management** - localStorage használat  
 ✅ **Protected Routes** - Loading state kezeléssel  
 ✅ **User-friendly error messages** - Professzionális hibakezelés  
-✅ **Persistent sessions** - Token perzisztencia
+✅ **Persistent sessions** - Token perzisztencia  
+✅ **User name display** - Dashboard és Courses oldalon
 
 ### Következő lépések (3. modul)
 
 A következő modulban fogjuk:
 
+- **Lecserélni a mock service-t valódi API hívásokra**
 - Implementálni a teljes API integrációt (courses, chapters, mentors)
 - Chart.js diagramokat készíteni
 - LinkedIn share widget-et integrálni
 - Real-time polling-ot implementálni (mentor foglalások)
 - Loading states-eket hozzáadni
 - Teljes alkalmazást befejezni
+
+> [!NOTE] > **Miért előbb mock, aztán API?**
+>
+> 1. **Párhuzamos fejlesztés**: Frontend és backend egymástól függetlenül fejleszthető
+> 2. **Gyors iteráció**: Nem kell várni a backend készültségére
+> 3. **Egyszerű átállás**: A 3. modulban csak a service réteget kell lecserélni
+> 4. **Jobb architektúra**: Tiszta szeparáció a service és UI rétegek között
 
 ## Kiegészítő feladatok (ha van időd)
 
@@ -1025,8 +1405,9 @@ A következő modulban fogjuk:
 
    - A regisztráció után mutass egy szép üzenetet, hogy "Ellenőrizd az email-edet"
 
-4. **Forgot password link:**
-   - Adj hozzá egy "Elfelejtetted a jelszavad?" linket a login oldalhoz
+4. **Több mock user hozzáadása:**
+   - Adj hozzá több usert különböző kreditekkel és statisztikákkal
+   - Teszteld az alkalmazást különböző user-ekkel
 
 > [!NOTE]
-> Nagyszerű munkát végeztél! A következő modulban befejezzük az alkalmazást API integrációval és Chart.js diagramokkal!
+> Nagyszerű munkát végeztél! A következő modulban lecseréljük a mock service-t valódi API hívásokra és befejezzük az alkalmazást!
