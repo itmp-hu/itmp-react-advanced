@@ -323,7 +323,38 @@ Egy **védett route (protected route)** olyan oldal, amelyet csak bejelentkezett
 7. Backend a token alapján azonosítja a felhasználót
 ```
 
-### X-API token tárolása
+### X-API token tárolása localStorage használatával
+
+**localStorage alapműveletek:**
+
+```jsx
+// Adat mentése
+localStorage.setItem("key", "value");
+
+// Adat kiolvasása
+const value = localStorage.getItem("key");
+
+// Adat törlése
+localStorage.removeItem("key");
+
+// Minden adat törlése
+localStorage.clear();
+```
+
+**JSON adatok tárolása**
+
+A localStorage csak string-eket tud tárolni, ezért objektumokat JSON-ként kell kezelni:
+
+```jsx
+// Objektum mentése
+const user = { name: "János", email: "janos@example.com" };
+localStorage.setItem("user", JSON.stringify(user));
+
+// Objektum kiolvasása
+const storedUser = JSON.parse(localStorage.getItem("user"));
+```
+
+**X-API token tárolása**
 
 ```jsx
 // Token mentése login után

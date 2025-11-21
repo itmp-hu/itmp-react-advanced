@@ -4,13 +4,14 @@
 
 ## Áttekintés
 
-Ebben a rövid gyakorlatban egy félig kész SkillShare Academy alkalmazásba fogod implementálni:
+Ebben a rövid gyakorlatban egy félig kész SkillShare Academy alkalmazásba fogod implementálni az alábbiakat:
 
-- ✅ React Router v7 Data Router konfigurálását
-- ✅ Middleware-alapú hitelesítést
-- ✅ Egy hiányzó oldal komponenst (MentorsPage)
-- ✅ Egy hiányzó komponenst (Navigation)
-- ✅ Védett route-ok és átirányításokat
+1. **MentorsPage komponens** - mentor foglalási oldal
+2. **Data Router konfiguráció** - React Router beállítás (még védelem nélkül)
+3. **Navigation komponens** - navigációs menü
+4. **Layout frissítés** - Navigation hozzáadása és Outlet használata
+5. **authMiddleware** - védett route-ok middleware-alapú védelme
+6. **Átirányítások** - login/register oldalakról dashboard-ra (ha már be van jelentkezve)
 
 ### Mit kapsz kiindulásként?
 
@@ -25,15 +26,6 @@ Ebben a rövid gyakorlatban egy félig kész SkillShare Academy alkalmazásba fo
 - ❌ **NINCS** Navigation komponens
 - ❌ **NINCS** middleware
 - ❌ **NINCS** MentorsPage
-
-### Mit fogsz implementálni? (ebben a sorrendben)
-
-1. **MentorsPage komponens** - mentor foglalási oldal
-2. **Data Router konfiguráció** - React Router beállítás (még védelem nélkül)
-3. **Navigation komponens** - navigációs menü
-4. **Layout frissítés** - Navigation hozzáadása és Outlet használata
-5. **authMiddleware** - védett route-ok middleware-alapú védelme
-6. **Átirányítások** - login/register oldalakról dashboard-ra (ha már be van jelentkezve)
 
 ---
 
@@ -225,13 +217,39 @@ function App() {
 }
 
 export default App;
+
 ```
+
+### Layout.jsx frissítése az Outlet komponenssel
+
+Cseréljük ki a `{{children}}`-t az `Outlet` komponensre, hogy a routingnak megfelelő komponens rendelerőldjön ki.
+
+```jsx
+
+import { Outlet } from "react-router";
+function Layout() {
+  return (
+    <div className="layout">
+      <header>Navigation</header>
+      <main className="main-content"><Outlet /></main>
+      <footer className="footer">
+        <p>&copy; 2025 SkillShare Academy. Minden jog fenntartva.</p>
+      </footer>
+    </div>
+  );
+}
+
+export default Layout;
+
+```
+
+
 
 > [!NOTE]
 > Figyeld meg, hogy most még **NINCS** `middleware: [authMiddleware]` a védett route-okon! Ezt később fogjuk hozzáadni.
 
 > [!TIP]
-> Most már működik a routing, de még nincs navigáció és védelem sem!
+> Most már működik a routing, de még nincs navigáció és védelem sem! A routingot tesztelhetjük pl. a `/login` és a `/mentors` címeken.
 
 ---
 
@@ -249,7 +267,6 @@ import { NavLink, useNavigate } from "react-router";
 function Navigation() {
   const navigate = useNavigate();
 
-  // Később ezt az AuthContext-ből fogjuk kiolvasni
   const token = localStorage.getItem("token");
 
   const handleLogout = () => {
@@ -264,8 +281,6 @@ function Navigation() {
       </div>
 
       <div className="nav-links">
-        {token ? (
-          <>
             <NavLink
               to="/dashboard"
               className={({ isActive }) =>
@@ -293,34 +308,14 @@ function Navigation() {
             <button onClick={handleLogout} className="btn btn-secondary">
               Kijelentkezés
             </button>
-          </>
-        ) : (
-          <>
-            <NavLink
-              to="/login"
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-            >
-              Bejelentkezés
-            </NavLink>
-            <NavLink
-              to="/register"
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-            >
-              Regisztráció
-            </NavLink>
-          </>
-        )}
-      </div>
+        </div>
     </nav>
   );
 }
 
 export default Navigation;
 ```
+
 
 > [!NOTE]
 > Most már megvan a Navigation komponens! De még nincs beépítve a Layout-ba.
@@ -524,6 +519,7 @@ A `navigate` deklaráció után add hozzá:
 
 ```jsx
 // Ha már be van jelentkezve, irányítsuk át a dashboard-ra
+const navigate = useNavigate()
 useEffect(() => {
   const token = localStorage.getItem("token");
   if (token) {
@@ -535,6 +531,16 @@ useEffect(() => {
 > [!TIP]
 > Ez biztosítja, hogy ha valaki már be van jelentkezve, nem férhet hozzá a login oldalhoz.
 
+A bejelentkezés után irányítsunk át automatikusan a dashboard-ra! Ehhez adjuk hozzá a hadleLogin függvényhez a `navigate("/dashboard")` utasítást:
+
+```jsx
+const handleLogin = (e) => {
+  e.preventDefault();
+  localStorage.setItem("token", "test-token-1234567890");
+  navigate("/dashboard");
+};
+```
+
 ### RegisterPage módosítása
 
 Ugyanezt add hozzá a `src/pages/RegisterPage.jsx` fájlhoz is:
@@ -544,18 +550,21 @@ Import:
 ```jsx
 import { useNavigate } from "react-router";
 import { useEffect } from "react";
-```
 
-useEffect:
-
-```jsx
-// Ha már be van jelentkezve, irányítsuk át a dashboard-ra
+const navigate = useNavigate();
 useEffect(() => {
   const token = localStorage.getItem("token");
   if (token) {
     navigate("/dashboard");
   }
 }, [navigate]);
+
+const handleRegister = (e) => {
+  e.preventDefault();
+  localStorage.setItem("token", "test-token-1234567890");
+  alert("Regisztráltál! (Később itt routing lesz)");
+  navigate("/dashboard");
+};
 ```
 
 ---
