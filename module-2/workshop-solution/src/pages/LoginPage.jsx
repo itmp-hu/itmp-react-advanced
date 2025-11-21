@@ -1,42 +1,66 @@
-import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router";
+import { useAuth } from "../contexts/AuthContext";
 
 function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
-  
+
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // Ha már be van jelentkezve, irányítsuk át
-  useEffect(() => {
+  // Ha már be van jelentkezve, irányítsuk a dashboard-ra
+  useState(() => {
     if (isAuthenticated) {
       navigate("/dashboard");
     }
   }, [isAuthenticated, navigate]);
 
+  // Form validáció
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!email) {
+      newErrors.email = "Az email cím kötelező";
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = "Érvénytelen email formátum";
+    }
+
+    if (!password) {
+      newErrors.password = "A jelszó kötelező";
+    } else if (password.length < 6) {
+      newErrors.password =
+        "A jelszónak legalább 6 karakter hosszúnak kell lennie";
+    }
+
+    return newErrors;
+  };
+
+  // Form elküldés
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setLoading(true);
+    setServerError("");
 
-    // Egyszerű validáció
-    if (!email || !password) {
-      setError("Minden mező kitöltése kötelező");
-      setLoading(false);
+    // Validáció
+    const validationErrors = validateForm();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
       return;
     }
 
-    const result = await login(email, password);
-
-    if (!result.success) {
-      setError(result.error);
+    // Login API hívás
+    setLoading(true);
+    try {
+      await login(email, password);
+      // A navigate már az AuthContext-ben van kezelve
+    } catch (error) {
+      setServerError(error.message);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
@@ -45,11 +69,7 @@ function LoginPage() {
         <h1>Bejelentkezés</h1>
         <p>SkillShare Academy tanulási platform</p>
 
-        {error && (
-          <div className="error-message">
-            ⚠️ {error}
-          </div>
-        )}
+        {serverError && <div className="alert alert-error">{serverError}</div>}
 
         <form className="login-form" onSubmit={handleSubmit}>
           <div className="form-group">
@@ -57,11 +77,20 @@ function LoginPage() {
             <input
               type="email"
               id="email"
+              name="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                // Töröljük a hibaüzenetet, ha a user módosítja a mezőt
+                if (errors.email) {
+                  setErrors((prev) => ({ ...prev, email: "" }));
+                }
+              }}
+              className={errors.email ? "input-error" : ""}
               placeholder="email@példa.hu"
               disabled={loading}
             />
+            {errors.email && <span className="error-text">{errors.email}</span>}
           </div>
 
           <div className="form-group">
@@ -69,11 +98,22 @@ function LoginPage() {
             <input
               type="password"
               id="password"
+              name="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                // Töröljük a hibaüzenetet, ha a user módosítja a mezőt
+                if (errors.password) {
+                  setErrors((prev) => ({ ...prev, password: "" }));
+                }
+              }}
+              className={errors.password ? "input-error" : ""}
               placeholder="Jelszó"
               disabled={loading}
             />
+            {errors.password && (
+              <span className="error-text">{errors.password}</span>
+            )}
           </div>
 
           <button type="submit" className="btn btn-primary" disabled={loading}>
@@ -84,11 +124,6 @@ function LoginPage() {
         <p className="register-link">
           Még nincs fiókod? <Link to="/register">Regisztrálj ingyen!</Link>
         </p>
-
-        <div className="test-accounts">
-          <p><small>Teszt fiókok (jelszó: password123):</small></p>
-          <p><small>alice.smith@example.com</small></p>
-        </div>
       </div>
     </div>
   );

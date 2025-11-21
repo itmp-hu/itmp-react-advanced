@@ -104,21 +104,25 @@ function Card({ children, title }) {
 
 **Render props pattern:**
 
+A render props egy olyan technika, ahol egy komponens egy függvényt kap prop-ként, amely meghatározza, hogy mit kell renderelnie. Ez lehetővé teszi a logika és a megjelenítés szétválasztását - a komponens kezeli az állapotot és viselkedést, míg a szülő komponens dönti el, hogyan jelenjen meg.
+
 ```jsx
-function DataFetcher({ url, render }) {
-  const [data, setData] = useState(null);
+function Toggle({ render }) {
+  const [isOn, setIsOn] = useState(false);
+  const toggle = () => setIsOn(!isOn);
 
-  useEffect(() => {
-    fetch(url)
-      .then((res) => res.json())
-      .then(setData);
-  }, [url]);
-
-  return render(data);
+  return render({ isOn, toggle });
 }
 
 // Használat:
-<DataFetcher url="/api/user" render={(user) => <div>{user?.name}</div>} />;
+<Toggle
+  render={({ isOn, toggle }) => (
+    <div>
+      <p>Állapot: {isOn ? "BE" : "KI"}</p>
+      <button onClick={toggle}>Kapcsoló</button>
+    </div>
+  )}
+/>;
 ```
 
 ### Feltételes renderelés minták
@@ -169,7 +173,6 @@ function AdminPanel({ isAdmin }) {
 1. **Single Responsibility** - Egy komponens egy dolgot csináljon jól
 2. **Props interface** - Világos, jól dokumentált props-ok
 3. **Alapértelmezett értékek** - Használj defaultProps-ot vagy default paramétereket
-4. **Composition over inheritance** - Kompozíciót használj, nem öröklést
 
 **Példa: Újrafelhasználható Button komponens**
 
@@ -210,22 +213,12 @@ A React-ben a form adatokat általában a komponens state-jében tároljuk:
 
 ```jsx
 function LoginForm() {
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value, // Dinamikus kulcs használata
-    }));
-  };
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   const handleSubmit = (e) => {
     e.preventDefault(); // Megakadályozza az oldal újratöltését
-    console.log("Form adatok:", formData);
+    console.log("Form adatok:", { email, password });
     // API hívás...
   };
 
@@ -233,16 +226,14 @@ function LoginForm() {
     <form onSubmit={handleSubmit}>
       <input
         type="email"
-        name="email"
-        value={formData.email}
-        onChange={handleChange}
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
         placeholder="Email"
       />
       <input
         type="password"
-        name="password"
-        value={formData.password}
-        onChange={handleChange}
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
         placeholder="Jelszó"
       />
       <button type="submit">Bejelentkezés</button>
@@ -704,28 +695,6 @@ function useLocalStorage(key, initialValue) {
 const [user, setUser] = useLocalStorage("user", null);
 ```
 
-**useForm hook:**
-
-```jsx
-function useForm(initialValues) {
-  const [values, setValues] = useState(initialValues);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setValues((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const reset = () => {
-    setValues(initialValues);
-  };
-
-  return { values, handleChange, reset };
-}
-
-// Használat:
-const { values, handleChange, reset } = useForm({ email: "", password: "" });
-```
-
 ## Browser Storage (localStorage)
 
 ### localStorage vs sessionStorage
@@ -736,37 +705,6 @@ const { values, handleChange, reset } = useForm({ email: "", password: "" });
 | Scope      | Azonos origin       | Azonos tab                 |
 | Méret      | ~5-10MB             | ~5-10MB                    |
 | Használat  | Hosszú távú tárolás | Ideiglenes adatok          |
-
-### localStorage használata
-
-**Alap műveletek:**
-
-```jsx
-// Adat mentése
-localStorage.setItem("key", "value");
-
-// Adat kiolvasása
-const value = localStorage.getItem("key");
-
-// Adat törlése
-localStorage.removeItem("key");
-
-// Minden adat törlése
-localStorage.clear();
-```
-
-### JSON adatok tárolása
-
-A localStorage csak string-eket tud tárolni, ezért objektumokat JSON-ként kell kezelni:
-
-```jsx
-// Objektum mentése
-const user = { name: "János", email: "janos@example.com" };
-localStorage.setItem("user", JSON.stringify(user));
-
-// Objektum kiolvasása
-const storedUser = JSON.parse(localStorage.getItem("user"));
-```
 
 ### Biztonság szempontok
 
@@ -782,30 +720,6 @@ const storedUser = JSON.parse(localStorage.getItem("user"));
 - User preferences (theme, language)
 - UI state
 - Cache-elt adatok
-
-**Token tárolás best practice:**
-
-```jsx
-// Token mentése
-const saveToken = (token) => {
-  localStorage.setItem("token", token);
-};
-
-// Token kiolvasása és validálás
-const getToken = () => {
-  const token = localStorage.getItem("token");
-  // Ellenőrizd, hogy érvényes-e
-  if (token && isTokenValid(token)) {
-    return token;
-  }
-  return null;
-};
-
-// Token törlése logout-nál
-const clearToken = () => {
-  localStorage.removeItem("token");
-};
-```
 
 ## Hibakezelési stratégiák
 

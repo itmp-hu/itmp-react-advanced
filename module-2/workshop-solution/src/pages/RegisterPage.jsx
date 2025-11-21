@@ -1,55 +1,82 @@
-import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router";
+import { useAuth } from "../contexts/AuthContext";
 
 function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  
+
   const { register, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate("/dashboard");
+  // Ha már be van jelentkezve, irányítsuk a dashboard-ra
+  if (isAuthenticated) {
+    navigate("/dashboard");
+  }
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!name) {
+      newErrors.name = "A név kötelező";
+    } else if (name.length < 3) {
+      newErrors.name = "A névnek legalább 3 karakter hosszúnak kell lennie";
     }
-  }, [isAuthenticated, navigate]);
+
+    if (!email) {
+      newErrors.email = "Az email cím kötelező";
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = "Érvénytelen email formátum";
+    }
+
+    if (!password) {
+      newErrors.password = "A jelszó kötelező";
+    } else if (password.length < 8) {
+      newErrors.password =
+        "A jelszónak legalább 8 karakter hosszúnak kell lennie";
+    }
+
+    if (!confirmPassword) {
+      newErrors.confirmPassword = "A jelszó megerősítése kötelező";
+    } else if (password !== confirmPassword) {
+      newErrors.confirmPassword = "A két jelszó nem egyezik";
+    }
+
+    return newErrors;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setLoading(true);
+    setServerError("");
+    setSuccessMessage("");
 
     // Validáció
-    if (!name || !email || !password || !confirmPassword) {
-      setError("Minden mező kitöltése kötelező");
-      setLoading(false);
+    const validationErrors = validateForm();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
       return;
     }
 
-    if (password !== confirmPassword) {
-      setError("A jelszavak nem egyeznek");
+    // Register API hívás
+    setLoading(true);
+    try {
+      const result = await register(name, email, password);
+      setSuccessMessage(result.message);
+      // 2 másodperc után átirányítás
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
+    } catch (error) {
+      setServerError(error.message);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    if (password.length < 6) {
-      setError("A jelszónak legalább 6 karakter hosszúnak kell lennie");
-      setLoading(false);
-      return;
-    }
-
-    const result = await register(name, email, password);
-
-    if (!result.success) {
-      setError(result.error);
-    }
-
-    setLoading(false);
   };
 
   return (
@@ -58,10 +85,10 @@ function RegisterPage() {
         <h1>Regisztráció</h1>
         <p>Ingyenes regisztráció</p>
 
-        {error && (
-          <div className="error-message">
-            ⚠️ {error}
-          </div>
+        {serverError && <div className="alert alert-error">{serverError}</div>}
+
+        {successMessage && (
+          <div className="alert alert-success">{successMessage}</div>
         )}
 
         <form className="register-form" onSubmit={handleSubmit}>
@@ -70,11 +97,20 @@ function RegisterPage() {
             <input
               type="text"
               id="name"
+              name="name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                // Töröljük a hibaüzenetet, ha a user módosítja a mezőt
+                if (errors.name) {
+                  setErrors((prev) => ({ ...prev, name: "" }));
+                }
+              }}
+              className={errors.name ? "input-error" : ""}
               placeholder="Kovács János"
               disabled={loading}
             />
+            {errors.name && <span className="error-text">{errors.name}</span>}
           </div>
 
           <div className="form-group">
@@ -82,11 +118,20 @@ function RegisterPage() {
             <input
               type="email"
               id="email"
+              name="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                // Töröljük a hibaüzenetet, ha a user módosítja a mezőt
+                if (errors.email) {
+                  setErrors((prev) => ({ ...prev, email: "" }));
+                }
+              }}
+              className={errors.email ? "input-error" : ""}
               placeholder="email@példa.hu"
               disabled={loading}
             />
+            {errors.email && <span className="error-text">{errors.email}</span>}
           </div>
 
           <div className="form-group">
@@ -94,11 +139,22 @@ function RegisterPage() {
             <input
               type="password"
               id="password"
+              name="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Legalább 6 karakter"
+              onChange={(e) => {
+                setPassword(e.target.value);
+                // Töröljük a hibaüzenetet, ha a user módosítja a mezőt
+                if (errors.password) {
+                  setErrors((prev) => ({ ...prev, password: "" }));
+                }
+              }}
+              className={errors.password ? "input-error" : ""}
+              placeholder="Legalább 8 karakter"
               disabled={loading}
             />
+            {errors.password && (
+              <span className="error-text">{errors.password}</span>
+            )}
           </div>
 
           <div className="form-group">
@@ -106,11 +162,22 @@ function RegisterPage() {
             <input
               type="password"
               id="confirmPassword"
+              name="confirmPassword"
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              onChange={(e) => {
+                setConfirmPassword(e.target.value);
+                // Töröljük a hibaüzenetet, ha a user módosítja a mezőt
+                if (errors.confirmPassword) {
+                  setErrors((prev) => ({ ...prev, confirmPassword: "" }));
+                }
+              }}
+              className={errors.confirmPassword ? "input-error" : ""}
               placeholder="Jelszó újra"
               disabled={loading}
             />
+            {errors.confirmPassword && (
+              <span className="error-text">{errors.confirmPassword}</span>
+            )}
           </div>
 
           <button type="submit" className="btn btn-primary" disabled={loading}>

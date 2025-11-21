@@ -1,130 +1,169 @@
-import { createContext, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { authService, userService } from "../services/api";
+import { createContext, useState, useContext, useEffect } from "react";
+import { useNavigate } from "react-router";
 
-export const AuthContext = createContext();
+// 1. Context létrehozása
+const AuthContext = createContext(undefined);
 
+// 2. Provider komponens
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Token ellenőrzése és felhasználó betöltése oldal betöltéskor
+  // Alkalmazás indulásakor ellenőrizzük, van-e mentett token
   useEffect(() => {
-    async function loadUser() {
-      const token = localStorage.getItem("token");
-      
-      if (token) {
-        try {
-          const response = await userService.getCurrentUser();
-          
-          if (response.ok) {
-            const userData = await response.json();
-            setUser(userData);
-          } else {
-            // Token érvénytelen, töröljük
-            localStorage.removeItem("token");
-          }
-        } catch (error) {
-          console.error("Error loading user:", error);
-          localStorage.removeItem("token");
-        }
-      }
-      
+    const savedToken = localStorage.getItem("token");
+    if (savedToken) {
+      setToken(savedToken);
+      // Token validálása és user adatok betöltése
+      fetchUserData(savedToken);
+    } else {
       setLoading(false);
     }
-
-    loadUser();
   }, []);
 
-  // Bejelentkezés
+  // User adatok betöltése az API-ból
+  const fetchUserData = async (authToken) => {
+    try {
+      const response = await fetch("http://localhost:5000/api/v1/users/me", {
+        headers: {
+          "X-API-Key": authToken,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data);
+      } else {
+        // Token érvénytelen, töröljük
+        localStorage.removeItem("token");
+        setToken(null);
+      }
+    } catch (error) {
+      console.error("Hiba a user adatok betöltésekor:", error);
+      localStorage.removeItem("token");
+      setToken(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Login funkció
   const login = async (email, password) => {
     try {
-      const response = await authService.login(email, password);
+      const response = await fetch("http://localhost:5000/api/v1/users/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-      if (response.status === 200) {
-        const data = await response.json();
-        localStorage.setItem("token", data.token);
-        setUser(data.user);
-        navigate("/dashboard");
-        return { success: true };
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("Hibás email vagy jelszó");
+        }
+        throw new Error("Hiba a bejelentkezés során");
       }
 
-      if (response.status === 401) {
-        return { success: false, error: "Hibás email vagy jelszó" };
-      }
+      const data = await response.json();
 
-      if (response.status === 422) {
-        const data = await response.json();
-        return { success: false, error: data.message || "Validációs hiba" };
-      }
+      // Token és user mentése
+      setToken(data.token);
+      setUser(data.user);
+      localStorage.setItem("token", data.token);
 
-      return { success: false, error: "Hiba történt a bejelentkezés során" };
+      // Átirányítás a dashboard-ra
+      navigate("/dashboard");
+
+      return { success: true };
     } catch (error) {
-      console.error("Login error:", error);
-      return { success: false, error: "Hálózati hiba történt" };
+      console.error("Login hiba:", error);
+      throw error;
     }
   };
 
-  // Regisztráció
+  // Register funkció
   const register = async (name, email, password) => {
     try {
-      const response = await authService.register(name, email, password);
+      const response = await fetch(
+        "http://localhost:5000/api/v1/users/register",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name, email, password }),
+        }
+      );
 
-      if (response.status === 201) {
-        const data = await response.json();
-        localStorage.setItem("token", data.token);
-        setUser(data.user);
-        navigate("/dashboard");
-        return { success: true };
+      if (!response.ok) {
+        if (response.status === 400) {
+          throw new Error("Ez az email cím már használatban van");
+        }
+        throw new Error("Hiba a regisztráció során");
       }
 
-      if (response.status === 400) {
-        return { success: false, error: "A felhasználó már létezik" };
-      }
+      const data = await response.json();
 
-      if (response.status === 422) {
-        const data = await response.json();
-        return { success: false, error: data.message || "Validációs hiba" };
-      }
+      // Regisztráció után átirányítás a login oldalra
+      navigate("/login");
 
-      return { success: false, error: "Hiba történt a regisztráció során" };
+      return {
+        success: true,
+        message: "Sikeres regisztráció! Most már bejelentkezhetsz.",
+      };
     } catch (error) {
-      console.error("Register error:", error);
-      return { success: false, error: "Hálózati hiba történt" };
+      console.error("Regisztráció hiba:", error);
+      throw error;
     }
   };
 
-  // Kijelentkezés
-  const logout = () => {
-    localStorage.removeItem("token");
-    setUser(null);
-    navigate("/login");
-  };
-
-  // Felhasználó adatainak frissítése (pl. kredit változás után)
-  const refreshUser = async () => {
+  // Logout funkció
+  const logout = async () => {
     try {
-      const response = await userService.getCurrentUser();
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData);
+      // Opcionális: logout API hívás
+      if (token) {
+        await fetch("http://localhost:5000/api/v1/users/logout", {
+          method: "POST",
+          headers: {
+            "X-API-Key": token,
+          },
+        });
       }
     } catch (error) {
-      console.error("Error refreshing user:", error);
+      console.error("Logout hiba:", error);
+    } finally {
+      // Token és user törlése
+      setToken(null);
+      setUser(null);
+      localStorage.removeItem("token");
+      navigate("/login");
     }
   };
 
   const value = {
     user,
+    token,
     loading,
     login,
     register,
     logout,
-    refreshUser,
-    isAuthenticated: !!user
+    isAuthenticated: !!token,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+// 3. Custom hook a Context használatához
+export function useAuth() {
+  const context = useContext(AuthContext);
+
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+
+  return context;
 }
 

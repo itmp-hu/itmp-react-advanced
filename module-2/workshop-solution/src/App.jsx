@@ -1,62 +1,51 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
-import Layout from './components/Layout';
-import ProtectedRoute from './components/ProtectedRoute';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import DashboardPage from './pages/DashboardPage';
-import CoursesPage from './pages/CoursesPage';
-import CourseDetailsPage from './pages/CourseDetailsPage';
-import MentorsPage from './pages/MentorsPage';
+import { Routes, Route, Navigate } from "react-router";
+import Layout from "./components/Layout";
+import ProtectedRoute from "./components/ProtectedRoute";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import DashboardPage from "./pages/DashboardPage";
+import CoursesPage from "./pages/CoursesPage";
+import CourseDetailsPage from "./pages/CourseDetailsPage";
+import MentorsPage from "./pages/MentorsPage";
 
 function App() {
   return (
-    <AuthProvider>
-      <Routes>
-      {/* Nyilvános route-ok Layout nélkül */}
+    <Routes>
+      {/* Nyilvános route-ok */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      
+
       {/* Védett route-ok Layout-tal */}
-      <Route element={<Layout />}>
-        <Route path="/dashboard" element={
+      <Route
+        path="/"
+        element={
           <ProtectedRoute>
-            <DashboardPage />
+            <Layout />
           </ProtectedRoute>
-        } />
-        
-        <Route path="/courses" element={
-          <ProtectedRoute>
-            <CoursesPage />
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/courses/:id" element={
-          <ProtectedRoute>
-            <CourseDetailsPage />
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/mentors" element={
-          <ProtectedRoute>
-            <MentorsPage />
-          </ProtectedRoute>
-        } />
+        }
+      >
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route path="dashboard" element={<DashboardPage />} />
+        <Route path="courses">
+          <Route index element={<CoursesPage />} />
+          <Route path=":id" element={<CourseDetailsPage />} />
+        </Route>
+        <Route path="mentors" element={<MentorsPage />} />
       </Route>
-      
-      {/* Alapértelmezett átirányítás */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      
+
       {/* 404 - Not Found */}
-      <Route path="*" element={
-        <div style={{ padding: '2rem', textAlign: 'center' }}>
-          <h1>404 - Az oldal nem található</h1>
-          <a href="/login">Vissza a főoldalra</a>
-        </div>
-      } />
-      </Routes>
-    </AuthProvider>
+      <Route
+        path="*"
+        element={
+          <div style={{ padding: "2rem", textAlign: "center" }}>
+            <h1>404 - Az oldal nem található</h1>
+            <a href="/login">Vissza a főoldalra</a>
+          </div>
+        }
+      />
+    </Routes>
   );
 }
 
 export default App;
+

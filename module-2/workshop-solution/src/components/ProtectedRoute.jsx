@@ -1,14 +1,24 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate } from "react-router";
+import { useAuth } from "../contexts/AuthContext";
 
 function ProtectedRoute({ children }) {
-  const token = localStorage.getItem('token');
-  
-  if (!token) {
-    // Ha nincs token, irányítsuk a login oldalra
+  const { isAuthenticated, loading } = useAuth();
+
+  // Loading állapot kezelése
+  if (loading) {
+    return (
+      <div style={{ padding: "2rem", textAlign: "center" }}>
+        <p>Betöltés...</p>
+      </div>
+    );
+  }
+
+  // Ha nincs bejelentkezve, irányítsuk a login oldalra
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
-  
-  // Ha van token, jelenítsd meg az oldalt
+
+  // Ha be van jelentkezve, jelenítsd meg az oldalt
   return children;
 }
 

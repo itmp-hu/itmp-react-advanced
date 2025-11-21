@@ -15,7 +15,9 @@
 
 ## Előkészületek
 
-### Kiindulási állapot ellenőrzése
+### Kiindulási állapot
+
+A kiindulási állapot az előző modul befejeztő állapota lesz. A saját megoldásod helyett célszerű a `/assets/module-1/workshop-solution` mappába levő projekttel dolgoznod.
 
 Győződj meg róla, hogy az 1. modul befejezett állapotában vagy:
 
@@ -23,13 +25,7 @@ Győződj meg róla, hogy az 1. modul befejezett állapotában vagy:
 ✅ 6 oldal komponens létrehozva  
 ✅ Layout és Navigation komponensek működnek  
 ✅ Protected Route implementálva  
-✅ Alap CSS stílusok működnek  
-
-Ha bármelyik hiányzik, térj vissza a `module-1-solution` branchhez:
-
-```bash
-git checkout module-1-solution
-```
+✅ Alap CSS stílusok működnek
 
 ### Backend ellenőrzése
 
@@ -56,8 +52,8 @@ Az AuthContext fogja tárolni a hitelesítési állapotot (user, token) és a hi
 Hozz létre egy `src/contexts/AuthContext.jsx` fájlt:
 
 ```jsx
-import { createContext, useState, useContext, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { createContext, useState, useContext, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 // 1. Context létrehozása
 const AuthContext = createContext();
@@ -71,7 +67,7 @@ export function AuthProvider({ children }) {
 
   // Alkalmazás indulásakor ellenőrizzük, van-e mentett token
   useEffect(() => {
-    const savedToken = localStorage.getItem('token');
+    const savedToken = localStorage.getItem("token");
     if (savedToken) {
       setToken(savedToken);
       // User adatok betöltése a tokennel
@@ -84,10 +80,10 @@ export function AuthProvider({ children }) {
   // User adatok lekérése
   const fetchUserData = async (authToken) => {
     try {
-      const response = await fetch('http://localhost:5000/api/v1/users/me', {
+      const response = await fetch("http://localhost:5000/api/v1/users/me", {
         headers: {
-          'X-API-Key': authToken
-        }
+          "X-API-Key": authToken,
+        },
       });
 
       if (response.ok) {
@@ -95,12 +91,12 @@ export function AuthProvider({ children }) {
         setUser(userData);
       } else {
         // Token érvénytelen, töröljük
-        localStorage.removeItem('token');
+        localStorage.removeItem("token");
         setToken(null);
       }
     } catch (error) {
-      console.error('Hiba a user adatok betöltésekor:', error);
-      localStorage.removeItem('token');
+      console.error("Hiba a user adatok betöltésekor:", error);
+      localStorage.removeItem("token");
       setToken(null);
     } finally {
       setLoading(false);
@@ -110,34 +106,34 @@ export function AuthProvider({ children }) {
   // Login függvény
   const login = async (email, password) => {
     try {
-      const response = await fetch('http://localhost:5000/api/v1/users/login', {
-        method: 'POST',
+      const response = await fetch("http://localhost:5000/api/v1/users/login", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password }),
       });
 
       if (!response.ok) {
         if (response.status === 401) {
-          throw new Error('Hibás email vagy jelszó');
+          throw new Error("Hibás email vagy jelszó");
         }
-        throw new Error('Hiba a bejelentkezés során');
+        throw new Error("Hiba a bejelentkezés során");
       }
 
       const data = await response.json();
-      
+
       // Token és user mentése
       setToken(data.token);
       setUser(data.user);
-      localStorage.setItem('token', data.token);
+      localStorage.setItem("token", data.token);
 
       // Átirányítás a dashboard-ra
-      navigate('/dashboard');
-      
+      navigate("/dashboard");
+
       return { success: true };
     } catch (error) {
-      console.error('Login hiba:', error);
+      console.error("Login hiba:", error);
       throw error;
     }
   };
@@ -145,29 +141,35 @@ export function AuthProvider({ children }) {
   // Register függvény
   const register = async (name, email, password) => {
     try {
-      const response = await fetch('http://localhost:5000/api/v1/users/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ name, email, password })
-      });
+      const response = await fetch(
+        "http://localhost:5000/api/v1/users/register",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name, email, password }),
+        }
+      );
 
       if (!response.ok) {
         if (response.status === 400) {
-          throw new Error('Ez az email cím már használatban van');
+          throw new Error("Ez az email cím már használatban van");
         }
-        throw new Error('Hiba a regisztráció során');
+        throw new Error("Hiba a regisztráció során");
       }
 
       const data = await response.json();
-      
+
       // Regisztráció után átirányítás a login oldalra
-      navigate('/login');
-      
-      return { success: true, message: 'Sikeres regisztráció! Most már bejelentkezhetsz.' };
+      navigate("/login");
+
+      return {
+        success: true,
+        message: "Sikeres regisztráció! Most már bejelentkezhetsz.",
+      };
     } catch (error) {
-      console.error('Regisztráció hiba:', error);
+      console.error("Regisztráció hiba:", error);
       throw error;
     }
   };
@@ -177,21 +179,21 @@ export function AuthProvider({ children }) {
     try {
       // Opcionális: logout API hívás
       if (token) {
-        await fetch('http://localhost:5000/api/v1/users/logout', {
-          method: 'POST',
+        await fetch("http://localhost:5000/api/v1/users/logout", {
+          method: "POST",
           headers: {
-            'X-API-Key': token
-          }
+            "X-API-Key": token,
+          },
         });
       }
     } catch (error) {
-      console.error('Logout hiba:', error);
+      console.error("Logout hiba:", error);
     } finally {
       // Token és user törlése
       setToken(null);
       setUser(null);
-      localStorage.removeItem('token');
-      navigate('/login');
+      localStorage.removeItem("token");
+      navigate("/login");
     }
   };
 
@@ -202,30 +204,27 @@ export function AuthProvider({ children }) {
     login,
     register,
     logout,
-    isAuthenticated: !!token
+    isAuthenticated: !!token,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 // 3. Custom hook a Context használatához
 export function useAuth() {
   const context = useContext(AuthContext);
-  
+
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
-  
+
   return context;
 }
 ```
 
 > [!TIP]
 > Az AuthContext három fő részből áll:
+>
 > 1. **Context létrehozása** - createContext()
 > 2. **Provider komponens** - Tartalmazza az állapotot és a műveleteket
 > 3. **Custom hook** - Kényelmes hozzáférés a Context-hez
@@ -235,14 +234,14 @@ export function useAuth() {
 Módosítsd az `src/main.jsx` fájlt:
 
 ```jsx
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
-import App from './App.jsx';
-import './index.css';
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
+import App from "./App.jsx";
+import "./index.css";
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
       <AuthProvider>
@@ -263,56 +262,42 @@ Most frissítsük a LoginPage komponenst, hogy használja az AuthContext-et.
 Módosítsd a `src/pages/LoginPage.jsx` fájlt:
 
 ```jsx
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 function LoginPage() {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({});
-  const [serverError, setServerError] = useState('');
+  const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
-  
+
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   // Ha már be van jelentkezve, irányítsuk a dashboard-ra
   useState(() => {
     if (isAuthenticated) {
-      navigate('/dashboard');
+      navigate("/dashboard");
     }
   }, [isAuthenticated, navigate]);
-
-  // Form mező változás kezelése
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    // Töröljük a hibaüzenetet, ha a user módosítja a mezőt
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
-    }
-  };
 
   // Form validáció
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.email) {
-      newErrors.email = 'Az email cím kötelező';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Érvénytelen email formátum';
+    if (!email) {
+      newErrors.email = "Az email cím kötelező";
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = "Érvénytelen email formátum";
     }
 
-    if (!formData.password) {
-      newErrors.password = 'A jelszó kötelező';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'A jelszónak legalább 6 karakter hosszúnak kell lennie';
+    if (!password) {
+      newErrors.password = "A jelszó kötelező";
+    } else if (password.length < 6) {
+      newErrors.password =
+        "A jelszónak legalább 6 karakter hosszúnak kell lennie";
     }
 
     return newErrors;
@@ -321,7 +306,7 @@ function LoginPage() {
   // Form elküldés
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setServerError('');
+    setServerError("");
 
     // Validáció
     const validationErrors = validateForm();
@@ -333,7 +318,7 @@ function LoginPage() {
     // Login API hívás
     setLoading(true);
     try {
-      await login(formData.email, formData.password);
+      await login(email, password);
       // A navigate már az AuthContext-ben van kezelve
     } catch (error) {
       setServerError(error.message);
@@ -348,11 +333,7 @@ function LoginPage() {
         <h1>Bejelentkezés</h1>
         <p>SkillShare Academy tanulási platform</p>
 
-        {serverError && (
-          <div className="alert alert-error">
-            {serverError}
-          </div>
-        )}
+        {serverError && <div className="alert alert-error">{serverError}</div>}
 
         <form className="login-form" onSubmit={handleSubmit}>
           <div className="form-group">
@@ -361,15 +342,19 @@ function LoginPage() {
               type="email"
               id="email"
               name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className={errors.email ? 'input-error' : ''}
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                // Töröljük a hibaüzenetet, ha a user módosítja a mezőt
+                if (errors.email) {
+                  setErrors((prev) => ({ ...prev, email: "" }));
+                }
+              }}
+              className={errors.email ? "input-error" : ""}
               placeholder="email@példa.hu"
               disabled={loading}
             />
-            {errors.email && (
-              <span className="error-text">{errors.email}</span>
-            )}
+            {errors.email && <span className="error-text">{errors.email}</span>}
           </div>
 
           <div className="form-group">
@@ -378,9 +363,15 @@ function LoginPage() {
               type="password"
               id="password"
               name="password"
-              value={formData.password}
-              onChange={handleChange}
-              className={errors.password ? 'input-error' : ''}
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                // Töröljük a hibaüzenetet, ha a user módosítja a mezőt
+                if (errors.password) {
+                  setErrors((prev) => ({ ...prev, password: "" }));
+                }
+              }}
+              className={errors.password ? "input-error" : ""}
               placeholder="Jelszó"
               disabled={loading}
             />
@@ -389,12 +380,8 @@ function LoginPage() {
             )}
           </div>
 
-          <button 
-            type="submit" 
-            className="btn btn-primary"
-            disabled={loading}
-          >
-            {loading ? 'Bejelentkezés...' : 'Bejelentkezés'}
+          <button type="submit" className="btn btn-primary" disabled={loading}>
+            {loading ? "Bejelentkezés..." : "Bejelentkezés"}
           </button>
         </form>
 
@@ -450,67 +437,54 @@ Add hozzá az `src/index.css` fájl végéhez:
 Módosítsd a `src/pages/RegisterPage.jsx` fájlt:
 
 ```jsx
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 function RegisterPage() {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: ''
-  });
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState({});
-  const [serverError, setServerError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
+  const [serverError, setServerError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  
+
   const { register, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   // Ha már be van jelentkezve, irányítsuk a dashboard-ra
   if (isAuthenticated) {
-    navigate('/dashboard');
+    navigate("/dashboard");
   }
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    // Töröljük a hibaüzenetet
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
-    }
-  };
 
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.name) {
-      newErrors.name = 'A név kötelező';
-    } else if (formData.name.length < 3) {
-      newErrors.name = 'A névnek legalább 3 karakter hosszúnak kell lennie';
+    if (!name) {
+      newErrors.name = "A név kötelező";
+    } else if (name.length < 3) {
+      newErrors.name = "A névnek legalább 3 karakter hosszúnak kell lennie";
     }
 
-    if (!formData.email) {
-      newErrors.email = 'Az email cím kötelező';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Érvénytelen email formátum';
+    if (!email) {
+      newErrors.email = "Az email cím kötelező";
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = "Érvénytelen email formátum";
     }
 
-    if (!formData.password) {
-      newErrors.password = 'A jelszó kötelező';
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'A jelszónak legalább 8 karakter hosszúnak kell lennie';
+    if (!password) {
+      newErrors.password = "A jelszó kötelező";
+    } else if (password.length < 8) {
+      newErrors.password =
+        "A jelszónak legalább 8 karakter hosszúnak kell lennie";
     }
 
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'A jelszó megerősítése kötelező';
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'A két jelszó nem egyezik';
+    if (!confirmPassword) {
+      newErrors.confirmPassword = "A jelszó megerősítése kötelező";
+    } else if (password !== confirmPassword) {
+      newErrors.confirmPassword = "A két jelszó nem egyezik";
     }
 
     return newErrors;
@@ -518,8 +492,8 @@ function RegisterPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setServerError('');
-    setSuccessMessage('');
+    setServerError("");
+    setSuccessMessage("");
 
     // Validáció
     const validationErrors = validateForm();
@@ -531,11 +505,11 @@ function RegisterPage() {
     // Register API hívás
     setLoading(true);
     try {
-      const result = await register(formData.name, formData.email, formData.password);
+      const result = await register(name, email, password);
       setSuccessMessage(result.message);
       // 2 másodperc után átirányítás
       setTimeout(() => {
-        navigate('/login');
+        navigate("/login");
       }, 2000);
     } catch (error) {
       setServerError(error.message);
@@ -550,16 +524,10 @@ function RegisterPage() {
         <h1>Regisztráció</h1>
         <p>Ingyenes regisztráció</p>
 
-        {serverError && (
-          <div className="alert alert-error">
-            {serverError}
-          </div>
-        )}
+        {serverError && <div className="alert alert-error">{serverError}</div>}
 
         {successMessage && (
-          <div className="alert alert-success">
-            {successMessage}
-          </div>
+          <div className="alert alert-success">{successMessage}</div>
         )}
 
         <form className="register-form" onSubmit={handleSubmit}>
@@ -569,15 +537,19 @@ function RegisterPage() {
               type="text"
               id="name"
               name="name"
-              value={formData.name}
-              onChange={handleChange}
-              className={errors.name ? 'input-error' : ''}
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                // Töröljük a hibaüzenetet, ha a user módosítja a mezőt
+                if (errors.name) {
+                  setErrors((prev) => ({ ...prev, name: "" }));
+                }
+              }}
+              className={errors.name ? "input-error" : ""}
               placeholder="Kovács János"
               disabled={loading}
             />
-            {errors.name && (
-              <span className="error-text">{errors.name}</span>
-            )}
+            {errors.name && <span className="error-text">{errors.name}</span>}
           </div>
 
           <div className="form-group">
@@ -586,15 +558,19 @@ function RegisterPage() {
               type="email"
               id="email"
               name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className={errors.email ? 'input-error' : ''}
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                // Töröljük a hibaüzenetet, ha a user módosítja a mezőt
+                if (errors.email) {
+                  setErrors((prev) => ({ ...prev, email: "" }));
+                }
+              }}
+              className={errors.email ? "input-error" : ""}
               placeholder="email@példa.hu"
               disabled={loading}
             />
-            {errors.email && (
-              <span className="error-text">{errors.email}</span>
-            )}
+            {errors.email && <span className="error-text">{errors.email}</span>}
           </div>
 
           <div className="form-group">
@@ -603,9 +579,15 @@ function RegisterPage() {
               type="password"
               id="password"
               name="password"
-              value={formData.password}
-              onChange={handleChange}
-              className={errors.password ? 'input-error' : ''}
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                // Töröljük a hibaüzenetet, ha a user módosítja a mezőt
+                if (errors.password) {
+                  setErrors((prev) => ({ ...prev, password: "" }));
+                }
+              }}
+              className={errors.password ? "input-error" : ""}
               placeholder="Legalább 8 karakter"
               disabled={loading}
             />
@@ -620,9 +602,15 @@ function RegisterPage() {
               type="password"
               id="confirmPassword"
               name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              className={errors.confirmPassword ? 'input-error' : ''}
+              value={confirmPassword}
+              onChange={(e) => {
+                setConfirmPassword(e.target.value);
+                // Töröljük a hibaüzenetet, ha a user módosítja a mezőt
+                if (errors.confirmPassword) {
+                  setErrors((prev) => ({ ...prev, confirmPassword: "" }));
+                }
+              }}
+              className={errors.confirmPassword ? "input-error" : ""}
               placeholder="Jelszó újra"
               disabled={loading}
             />
@@ -631,12 +619,8 @@ function RegisterPage() {
             )}
           </div>
 
-          <button 
-            type="submit" 
-            className="btn btn-primary"
-            disabled={loading}
-          >
-            {loading ? 'Regisztráció...' : 'Regisztráció'}
+          <button type="submit" className="btn btn-primary" disabled={loading}>
+            {loading ? "Regisztráció..." : "Regisztráció"}
           </button>
         </form>
 
@@ -658,14 +642,14 @@ Frissítsük a Navigation komponenst, hogy az AuthContext-et használja:
 Módosítsd a `src/components/Navigation.jsx` fájlt:
 
 ```jsx
-import { NavLink } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { NavLink } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 function Navigation() {
   const { user, isAuthenticated, logout } = useAuth();
 
   const handleLogout = () => {
-    if (window.confirm('Biztosan ki szeretnél jelentkezni?')) {
+    if (window.confirm("Biztosan ki szeretnél jelentkezni?")) {
       logout();
     }
   };
@@ -675,28 +659,34 @@ function Navigation() {
       <div className="nav-brand">
         <h2>SkillShare Academy</h2>
       </div>
-      
+
       <div className="nav-links">
         {isAuthenticated ? (
           <>
             <span className="user-greeting">
-              Szia, {user?.name || 'Felhasználó'}!
+              Szia, {user?.name || "Felhasználó"}!
             </span>
-            <NavLink 
-              to="/dashboard" 
-              className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}
+            <NavLink
+              to="/dashboard"
+              className={({ isActive }) =>
+                isActive ? "nav-link active" : "nav-link"
+              }
             >
               Dashboard
             </NavLink>
-            <NavLink 
-              to="/courses" 
-              className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}
+            <NavLink
+              to="/courses"
+              className={({ isActive }) =>
+                isActive ? "nav-link active" : "nav-link"
+              }
             >
               Kurzusok
             </NavLink>
-            <NavLink 
-              to="/mentors" 
-              className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}
+            <NavLink
+              to="/mentors"
+              className={({ isActive }) =>
+                isActive ? "nav-link active" : "nav-link"
+              }
             >
               Mentorok
             </NavLink>
@@ -706,15 +696,19 @@ function Navigation() {
           </>
         ) : (
           <>
-            <NavLink 
-              to="/login" 
-              className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}
+            <NavLink
+              to="/login"
+              className={({ isActive }) =>
+                isActive ? "nav-link active" : "nav-link"
+              }
             >
               Bejelentkezés
             </NavLink>
-            <NavLink 
-              to="/register" 
-              className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}
+            <NavLink
+              to="/register"
+              className={({ isActive }) =>
+                isActive ? "nav-link active" : "nav-link"
+              }
             >
               Regisztráció
             </NavLink>
@@ -746,12 +740,12 @@ Frissítsük a ProtectedRoute-ot, hogy az AuthContext loading állapotát kezelj
 Módosítsd a `src/components/ProtectedRoute.jsx` fájlt:
 
 ```jsx
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { Navigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
-  
+
   // Loading állapot kezelése
   if (loading) {
     return (
@@ -761,12 +755,12 @@ function ProtectedRoute({ children }) {
       </div>
     );
   }
-  
+
   // Ha nincs bejelentkezve, irányítsuk a login oldalra
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
-  
+
   // Ha be van jelentkezve, jelenítsd meg az oldalt
   return children;
 }
@@ -810,7 +804,7 @@ Frissítsük a Dashboard-ot, hogy megjelenítse a user adatait:
 Módosítsd a `src/pages/DashboardPage.jsx` fájlt:
 
 ```jsx
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from "../contexts/AuthContext";
 
 function DashboardPage() {
   const { user } = useAuth();
@@ -821,10 +815,14 @@ function DashboardPage() {
       <div className="dashboard-content">
         <div className="welcome-section">
           <h2>Üdvözöllek a SkillShare Academy-n, {user?.name}!</h2>
-          <p>Email: <strong>{user?.email}</strong></p>
-          <p>Jelenlegi kreditek: <strong>{user?.credits || 0}</strong></p>
+          <p>
+            Email: <strong>{user?.email}</strong>
+          </p>
+          <p>
+            Jelenlegi kreditek: <strong>{user?.credits || 0}</strong>
+          </p>
         </div>
-        
+
         <div className="stats-section">
           <div className="stat-card">
             <h3>Beiratkozott kurzusok</h3>
@@ -835,13 +833,18 @@ function DashboardPage() {
             <p className="stat-number">{user?.completedChaptersCount || 0}</p>
           </div>
         </div>
-        
+
         <div className="charts-section">
           <div className="chart-placeholder">
-            <p>Kredit gyűjtés grafikon (Chart.js) - 3. modulban implementáljuk</p>
+            <p>
+              Kredit gyűjtés grafikon (Chart.js) - 3. modulban implementáljuk
+            </p>
           </div>
           <div className="chart-placeholder">
-            <p>Kurzus előrehaladás grafikon (Chart.js) - 3. modulban implementáljuk</p>
+            <p>
+              Kurzus előrehaladás grafikon (Chart.js) - 3. modulban
+              implementáljuk
+            </p>
           </div>
         </div>
       </div>
@@ -861,12 +864,14 @@ Most teszteljük le az új hitelesítési rendszert!
 1. **Nyisd meg a böngészőt:** `http://localhost:5173`
 2. **Kattints a "Regisztráció" linkre**
 3. **Próbálj regisztrálni hibás adatokkal:**
+
    - Hagyd üresen a név mezőt → "A név kötelező"
    - Adj meg érvénytelen emailt → "Érvénytelen email formátum"
    - Adj meg rövid jelszót → "A jelszónak legalább 8 karakter hosszúnak kell lennie"
    - Különböző jelszavak → "A két jelszó nem egyezik"
 
 4. **Végezz sikeres regisztrációt:**
+
    ```
    Név: Teszt Felhasználó
    Email: test@example.com
@@ -881,13 +886,16 @@ Most teszteljük le az új hitelesítési rendszert!
 ### 2. Login tesztelése
 
 1. **Próbálj bejelentkezni hibás jelszóval:**
+
    ```
    Email: test@example.com
    Jelszó: wrongpassword
    ```
+
    → "Hibás email vagy jelszó" üzenet
 
 2. **Jelentkezz be a helyes adatokkal:**
+
    ```
    Email: test@example.com
    Jelszó: password123
@@ -921,12 +929,14 @@ Most teszteljük le az új hitelesítési rendszert!
 1. **Jelentkezz be**
 2. **Frissítsd az oldalt (F5)**
 3. **Ellenőrizd:**
+
    - Marad bejelentkezve
    - Nem irányít vissza a login oldalra
    - A Dashboard továbbra is látható
 
 4. **Nyisd meg a DevTools-t (F12) → Application → Local Storage**
 5. **Ellenőrizd:**
+
    - Látható a `token` kulcs az értékkel
 
 6. **Töröld a tokent a Local Storage-ból**
@@ -951,10 +961,12 @@ Próbálj meg ezzel bejelentkezni és ellenőrizd, hogy működik!
 Ha valami nem működik:
 
 **1. Konzol hibák ellenőrzése:**
+
 - Nyisd meg a DevTools-t (F12) → Console
 - Nézd meg, van-e hibaüzenet
 
 **2. Network tab ellenőrzése:**
+
 - DevTools (F12) → Network
 - Nézd meg a login/register API hívásokat
 - Ellenőrizd a status code-ot és a response-t
@@ -984,11 +996,12 @@ Ebben a modulban elkészítetted:
 ✅ **Token management** - localStorage használat  
 ✅ **Protected Routes** - Loading state kezeléssel  
 ✅ **User-friendly error messages** - Professzionális hibakezelés  
-✅ **Persistent sessions** - Token perzisztencia  
+✅ **Persistent sessions** - Token perzisztencia
 
 ### Következő lépések (3. modul)
 
 A következő modulban fogjuk:
+
 - Implementálni a teljes API integrációt (courses, chapters, mentors)
 - Chart.js diagramokat készíteni
 - LinkedIn share widget-et integrálni
@@ -999,14 +1012,17 @@ A következő modulban fogjuk:
 ## Kiegészítő feladatok (ha van időd)
 
 1. **Remember Me funkció:**
+
    - Adj hozzá egy checkbox-ot a login form-hoz
    - Ha be van pipálva, mentsd el az emailt is a localStorage-ba
 
 2. **Password strength indicator:**
+
    - Adj hozzá egy vizuális jelzőt a regisztrációs formhoz
    - Mutasd, hogy mennyire erős a jelszó (gyenge/közepes/erős)
 
 3. **Email verification üzenet:**
+
    - A regisztráció után mutass egy szép üzenetet, hogy "Ellenőrizd az email-edet"
 
 4. **Forgot password link:**
@@ -1014,4 +1030,3 @@ A következő modulban fogjuk:
 
 > [!NOTE]
 > Nagyszerű munkát végeztél! A következő modulban befejezzük az alkalmazást API integrációval és Chart.js diagramokkal!
-

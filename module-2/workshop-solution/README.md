@@ -1,16 +1,81 @@
-# React + Vite
+# SkillShare Academy - Module 2 Solution
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Áttekintés
 
-Currently, two official plugins are available:
+Ez a Module 2 teljes megoldása, amely tartalmazza:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- ✅ **AuthContext** - Globális hitelesítési állapot kezelés
+- ✅ **Login & Register** - Form validációval és hibakezeléssel
+- ✅ **Protected Routes** - ProtectedRoute komponenssel
+- ✅ **Navigation** - Felhasználói állapot megjelenítése
+- ✅ **Dashboard** - Felhasználói adatok megjelenítése
+- ✅ **Error Handling** - Professional error messages
 
-## React Compiler
+## Telepítés
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm install
+```
 
-## Expanding the ESLint configuration
+## Fejlesztői szerver indítása
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+npm run dev
+```
+
+## Backend szükségessége
+
+Ez az alkalmazás egy backend API-ra épül. Indítsd el a backend szervert:
+
+```bash
+# Backend mappában
+cd backend
+npm install
+npm start
+```
+
+A backend az `http://localhost:5000` címen fut.
+
+## Funkciók
+
+### AuthContext
+
+- Globális hitelesítési state
+- Login/Register/Logout műveletek
+- Token perzisztencia localStorage-ban
+- Automatikus user adatok betöltése
+
+### Oldalak
+
+1. **LoginPage** - Email/jelszó validációval
+2. **RegisterPage** - Teljes név, email, jelszó validációval
+3. **DashboardPage** - Felhasználói adatok megjelenítése
+4. **CoursesPage** - Kurzuslista (statikus)
+5. **CourseDetailsPage** - Kurzus részletek (statikus)
+6. **MentorsPage** - Mentor foglalás (statikus)
+
+### Komponensek
+
+- **AuthContext** - Context provider
+- **ProtectedRoute** - Route védelem
+- **Navigation** - Dinamikus navigáció auth state alapján
+- **Layout** - Oldal layout Navigation-nel
+
+## Következő lépések (Module 3)
+
+- API integráció a kurzusokhoz és mentorokhoz
+- Chart.js diagramok
+- Haladó form kezelés
+- Optimistic UI updates
+
+## Tesztelési adatok
+
+Backend teszteléshez használható:
+
+```
+Email: test@example.com
+Password: password123
+```
+
+(Vagy regisztrálj új felhasználót!)
+
