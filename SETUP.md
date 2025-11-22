@@ -60,5 +60,5 @@ A konténereke elindításához az alábbi lépéseket végezd el:
 - Csomagold ki a letöltött zipet.
 - Lépj be az assets/backend-solution mappába.
 - Add ki a `docker compose up -d` parancsot.
-- A backend működésének ellenőrzéséhez írd be a `http://localhos:5000/api/v1/health` címet.
-- Az adatbázist a szintén konténerként futó PHPMyadminban tudod megnézni: `http://localhos:8888`
+- A backend működésének ellenőrzéséhez írd be a `http://localhost:5000/api/v1/health` címet.
+- Az adatbázist a szintén konténerként futó PHPMyadminban tudod megnézni: `http://localhost:8888`
