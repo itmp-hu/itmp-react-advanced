@@ -9,7 +9,6 @@ function CourseDetailsPage() {
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [enrolling, setEnrolling] = useState(false);
   const [completingChapterId, setCompletingChapterId] = useState(null);
 
   const loadCourseDetails = async () => {
@@ -47,30 +46,6 @@ function CourseDetailsPage() {
       locale: "en-US",
     });
   }, []);
-
-  const handleEnroll = async () => {
-    setEnrolling(true);
-    setError("");
-
-    try {
-      const response = await courseService.enrollInCourse(id);
-
-      if (response.ok) {
-        // Frissítsd a kurzus adatokat és a felhasználó adatait
-        await loadCourseDetails();
-        await refreshUser();
-      } else if (response.status === 403) {
-        setError("Már beiratkoztál erre a kurzusra");
-      } else {
-        setError("Nem sikerült beiratkozni a kurzusra");
-      }
-    } catch (error) {
-      console.error("Error enrolling:", error);
-      setError("Hálózati hiba történt");
-    } finally {
-      setEnrolling(false);
-    }
-  };
 
   const handleCompleteChapter = async (chapterId) => {
     setCompletingChapterId(chapterId);
@@ -146,16 +121,6 @@ function CourseDetailsPage() {
         <p className="course-description">{course.description}</p>
 
         {error && <div className="error-message">⚠️ {error}</div>}
-
-        {!course.isEnrolled && (
-          <button
-            onClick={handleEnroll}
-            disabled={enrolling}
-            className="btn btn-primary"
-          >
-            {enrolling ? "Beiratkozás..." : "Beiratkozás"}
-          </button>
-        )}
 
         {course.isEnrolled && (
           <div className="progress-section">

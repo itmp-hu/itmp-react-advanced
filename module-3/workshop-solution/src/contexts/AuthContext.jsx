@@ -122,7 +122,7 @@ export function AuthProvider({ children }) {
       const response = await userService.getCurrentUser();
       if (response.ok) {
         const userData = await response.json();
-        setUser(userData);
+        setUser(userData.user);
       }
     } catch (error) {
       console.error("Error refreshing user:", error);

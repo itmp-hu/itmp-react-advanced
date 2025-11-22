@@ -8,12 +8,13 @@ function CoursesPage() {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [enrollError, setEnrollError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState("");
+  const [enrollingCourseId, setEnrollingCourseId] = useState(null);
 
   // Kurzusok betöltése
   const loadCourses = async () => {
-    setLoading(true);
     setError("");
 
     try {
@@ -37,6 +38,29 @@ function CoursesPage() {
   useEffect(() => {
     loadCourses();
   }, []);
+
+  const handleEnroll = async (courseId) => {
+    setEnrollError("");
+    setEnrollingCourseId(courseId);
+
+    try {
+      const response = await courseService.enrollInCourse(courseId);
+
+      if (response.ok) {
+        // refresh list
+        await loadCourses();
+      } else if (response.status === 403) {
+        setEnrollError("Már beiratkoztál erre a kurzusra");
+      } else {
+        setEnrollError("Nem sikerült beiratkozni a kurzusra");
+      }
+    } catch (err) {
+      console.error("Error enrolling:", err);
+      setEnrollError("Hálózati hiba történt");
+    } finally {
+      setEnrollingCourseId(null);
+    }
+  };
 
   // Szűrés és keresés
   const filteredCourses = courses.filter((course) => {
@@ -103,6 +127,8 @@ function CoursesPage() {
         </select>
       </div>
 
+      {enrollError && <div className="error-message">⚠️ {enrollError}</div>}
+
       {filteredCourses.length === 0 ? (
         <div className="no-results">
           <p>Nincs találat a keresési feltételeknek megfelelően.</p>
@@ -125,9 +151,15 @@ function CoursesPage() {
                   Folytatás
                 </Link>
               ) : (
-                <Link to={`/courses/${course.id}`} className="btn btn-primary">
-                  Részletek
-                </Link>
+                <button
+                  onClick={() => handleEnroll(course.id)}
+                  disabled={enrollingCourseId === course.id}
+                  className="btn btn-primary"
+                >
+                  {enrollingCourseId === course.id
+                    ? "Beiratkozás..."
+                    : "Beiratkozás"}
+                </button>
               )}
             </div>
           ))}
