@@ -100,54 +100,14 @@ export const authService = {
 ```
 
 **Megoldás elvárás:**
+
 - HTTP metódus: `POST`
 - Endpoint: `${API_BASE_URL}/users/register`
 - Headers: `Content-Type: application/json`
 - Body: JSON string `{ name, email, password }`
 - Return: `response` objektum
 
-## 2. lépés - api.js getCourseById függvény implementálása
-
-A `src/services/api.js` fájlban a `courseService.getCourseById` függvény hiányzik.
-
-### Feladat
-
-Implementáld a hiányzó `getCourseById` függvényt a `courseService` objektumban:
-
-```javascript
-// Kurzus szolgáltatások
-export const courseService = {
-  async getAllCourses() {
-    const response = await fetch(`${API_BASE_URL}/courses`, {
-      headers: getAuthHeaders(),
-    });
-    return response;
-  },
-
-  // TODO: Implementáld a getCourseById függvényt!
-  // Endpoint: GET /courses/:id
-  // Headers: X-API-TOKEN, Content-Type
-  async getCourseById(id) {
-    // A TE KÓDOD IDE KERÜL
-  },
-
-  async enrollInCourse(id) {
-    const response = await fetch(`${API_BASE_URL}/courses/${id}/enroll`, {
-      method: "POST",
-      headers: getAuthHeaders(),
-    });
-    return response;
-  },
-};
-```
-
-**Megoldás elvárás:**
-- HTTP metódus: `GET`
-- Endpoint: `${API_BASE_URL}/courses/${id}`
-- Headers: `getAuthHeaders()` használata (tartalmazza a token-t)
-- Return: `response` objektum
-
-## 3. lépés - AuthContext register függvény implementálása
+## 2. lépés - AuthContext register függvény implementálása
 
 Az `src/contexts/AuthContext.jsx` fájlban a `register` függvény hiányzik.
 
@@ -197,6 +157,7 @@ export function AuthProvider({ children }) {
 ```
 
 **Megoldás elvárás:**
+
 - Hívd meg az `authService.register(name, email, password)`-t
 - Ha `response.status === 201`: parse-old a JSON-t és return-öld
 - Ha `response.status === 400`: dobj hibát "A felhasználó már létezik"
@@ -207,7 +168,7 @@ export function AuthProvider({ children }) {
 > [!IMPORTANT]
 > A `register` függvény **NEM** navigál! A navigációt a komponens kezeli (RegisterPage).
 
-## 4. lépés - RegisterPage register hívás implementálása
+## 3. lépés - RegisterPage register hívás implementálása
 
 Az `src/pages/RegisterPage.jsx` fájlban a `handleSubmit` függvény register hívása hiányzik.
 
@@ -241,6 +202,7 @@ const handleSubmit = async (e) => {
 ```
 
 **Megoldás elvárás:**
+
 1. `setLoading(true)` a hívás előtt
 2. `try` blokk:
    - Hívd meg a `register(name, email, password)` függvényt (useAuth-ból)
@@ -251,6 +213,48 @@ const handleSubmit = async (e) => {
 4. `finally` blokk:
    - `setLoading(false)`
 
+## 4. lépés - api.js getCourseById függvény implementálása
+
+A `src/services/api.js` fájlban a `courseService.getCourseById` függvény hiányzik.
+
+### Feladat
+
+Implementáld a hiányzó `getCourseById` függvényt a `courseService` objektumban:
+
+```javascript
+// Kurzus szolgáltatások
+export const courseService = {
+  async getAllCourses() {
+    const response = await fetch(`${API_BASE_URL}/courses`, {
+      headers: getAuthHeaders(),
+    });
+    return response;
+  },
+
+  // TODO: Implementáld a getCourseById függvényt!
+  // Endpoint: GET /courses/:id
+  // Headers: X-API-TOKEN, Content-Type
+  async getCourseById(id) {
+    // A TE KÓDOD IDE KERÜL
+  },
+
+  async enrollInCourse(id) {
+    const response = await fetch(`${API_BASE_URL}/courses/${id}/enroll`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+    });
+    return response;
+  },
+};
+```
+
+**Megoldás elvárás:**
+
+- HTTP metódus: `GET`
+- Endpoint: `${API_BASE_URL}/courses/${id}`
+- Headers: `getAuthHeaders()` használata (tartalmazza a token-t)
+- Return: `response` objektum
+
 ## 5. lépés - Dashboard Recent Activity szekció implementálása
 
 A `src/pages/DashboardPage.jsx` fájlban a "Legutóbbi tevékenység" szekció hiányzik.
@@ -260,7 +264,9 @@ A `src/pages/DashboardPage.jsx` fájlban a "Legutóbbi tevékenység" szekció h
 Nyisd meg a `src/pages/DashboardPage.jsx` fájlt és add hozzá a Recent Activity szekciót a `charts-section` div-en belül, a Doughnut chart után:
 
 ```jsx
-{/* Grafikon */}
+{
+  /* Grafikon */
+}
 <div className="charts-section">
   <div className="chart-container">
     {enrolledCourses > 0 || completedChapters > 0 ? (
@@ -285,13 +291,15 @@ Nyisd meg a `src/pages/DashboardPage.jsx` fájlt és add hozzá a Recent Activit
   {/* 7. Ha nincs tevékenység: <p>Még nincs tevékenység</p> */}
 
   {/* A TE KÓDOD IDE KERÜL */}
-</div>
+</div>;
 ```
 
 **Megoldás elvárás:**
 
 ```jsx
-{/* Legutóbbi tevékenység */}
+{
+  /* Legutóbbi tevékenység */
+}
 <div className="recent-activity">
   <h3>Legutóbbi tevékenység</h3>
   {recentActivity && recentActivity.length > 0 ? (
@@ -311,19 +319,18 @@ Nyisd meg a `src/pages/DashboardPage.jsx` fájlt és add hozzá a Recent Activit
               </span>
             )}
           </div>
-          <small>
-            {new Date(activity.timestamp).toLocaleString("hu-HU")}
-          </small>
+          <small>{new Date(activity.timestamp).toLocaleString("hu-HU")}</small>
         </li>
       ))}
     </ul>
   ) : (
     <p>Még nincs tevékenység</p>
   )}
-</div>
+</div>;
 ```
 
 **Fontos pontok:**
+
 - Class: `recent-activity`
 - Lista: `ul.activity-list > li.activity-item`
 - Csak az első 5 tevékenységet jelenítsd meg: `slice(0, 5)`
@@ -370,39 +377,42 @@ return (
 **Megoldás elvárás:**
 
 ```jsx
-{bookedSessions.length > 0 && (
-  <section className="booked-sessions">
-    <h2>Foglalt időpontjaim</h2>
-    {bookedSessions.length === 0 ? (
-      <p>Jelenleg nincs foglalásod.</p>
-    ) : (
-      <div className="sessions-grid">
-        {bookedSessions.map((item) => {
-          const s = item.session;
-          return (
-            <div key={item.id} className="session-card booked">
-              <div className="session-info">
-                <h3>{s.mentorName}</h3>
-                <p>
-                  <strong>Időpont:</strong> {formatDateTime(s.sessionDate)}
-                </p>
-                <p>
-                  <strong>Állapot:</strong> {item.status}
-                </p>
-                <p>
-                  <strong>Költség:</strong> {item.creditsPaid} kredit
-                </p>
+{
+  bookedSessions.length > 0 && (
+    <section className="booked-sessions">
+      <h2>Foglalt időpontjaim</h2>
+      {bookedSessions.length === 0 ? (
+        <p>Jelenleg nincs foglalásod.</p>
+      ) : (
+        <div className="sessions-grid">
+          {bookedSessions.map((item) => {
+            const s = item.session;
+            return (
+              <div key={item.id} className="session-card booked">
+                <div className="session-info">
+                  <h3>{s.mentorName}</h3>
+                  <p>
+                    <strong>Időpont:</strong> {formatDateTime(s.sessionDate)}
+                  </p>
+                  <p>
+                    <strong>Állapot:</strong> {item.status}
+                  </p>
+                  <p>
+                    <strong>Költség:</strong> {item.creditsPaid} kredit
+                  </p>
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
-    )}
-  </section>
-)}
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
 ```
 
 **Fontos pontok:**
+
 - A `bookedSessions` már be van töltve (a komponens elején)
 - A `loadBookedSessions()` függvény már kész
 - A `usePolling` már meghívja
