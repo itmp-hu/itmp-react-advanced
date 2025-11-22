@@ -13,6 +13,7 @@ import {
   Legend,
 } from "chart.js";
 import { Doughnut } from "react-chartjs-2";
+import { userService } from "../services/api";
 
 // Chart.js komponensek regisztrálása
 ChartJS.register(
@@ -31,23 +32,38 @@ function DashboardPage() {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Az authUser valójában a dashboard adatokat tartalmazza a /users/me-ből
-    if (authUser) {
-      setDashboardData(authUser);
+  const loadData = async () => {
+    setLoading(true);
+
+    try {
+      const response = await userService.getCurrentUser();
+
+      if (response.ok) {
+        const data = await response.json();
+        setDashboardData(data);
+      } else {
+        setError("Nem sikerült betölteni a felhasználót");
+      }
+    } catch (error) {
+      console.error("Error loading user:", error);
+    } finally {
       setLoading(false);
     }
-  }, [authUser]);
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   if (authLoading || loading) {
     return <div className="page dashboard-page">Betöltés...</div>;
   }
-  console.log({ dashboardData });
-  if (!dashboardData || !dashboardData.email) {
+
+  if (!dashboardData || !dashboardData.user.email) {
     return <div className="page dashboard-page">Nincs felhasználó</div>;
   }
 
-  const { name, email, stats, credits, recentActivity } = dashboardData;
+  const { user, stats, credits, recentActivity } = dashboardData;
 
   // Kurzus előrehaladás grafikon
   // Megjegyzés: Az API nem ad vissza total_enrolled_chapters-t,
@@ -88,12 +104,12 @@ function DashboardPage() {
       <div className="dashboard-content">
         {/* Üdvözlő szekció */}
         <div className="welcome-section">
-          <h2>Üdvözöllek, {name}!</h2>
+          <h2>Üdvözöllek, {user.name}!</h2>
           <p>
-            Email: <strong>{email}</strong>
+            Email: <strong>{user.email}</strong>
           </p>
           <p>
-            Jelenlegi kreditek: <strong>{credits || 0}</strong>
+            Jelenlegi kreditek: <strong>{user.creditBalance || 0}</strong>
           </p>
         </div>
 

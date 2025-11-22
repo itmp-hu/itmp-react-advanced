@@ -135,7 +135,7 @@ function LoginPage() {
           <p style={{ fontSize: "0.875rem", color: "#0369a1" }}>
             <strong>Teszt bejelentkezés:</strong>
             <br />
-            Email: alice.smith@example.com
+            Email: alice@example.com
             <br />
             Jelszó: password123
           </p>
