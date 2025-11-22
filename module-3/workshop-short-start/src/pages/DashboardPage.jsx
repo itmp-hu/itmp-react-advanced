@@ -28,7 +28,7 @@ ChartJS.register(
 );
 
 function DashboardPage() {
-  const { user: authUser, loading: authLoading } = useAuth();
+  const { loading: authLoading } = useAuth();
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -42,7 +42,7 @@ function DashboardPage() {
         const data = await response.json();
         setDashboardData(data);
       } else {
-        setError("Nem sikerült betölteni a felhasználót");
+        console.error("Nem sikerült betölteni a felhasználót");
       }
     } catch (error) {
       console.error("Error loading user:", error);
@@ -63,7 +63,7 @@ function DashboardPage() {
     return <div className="page dashboard-page">Nincs felhasználó</div>;
   }
 
-  const { user, stats, credits, recentActivity } = dashboardData;
+  const { user, stats } = dashboardData;
 
   // Kurzus előrehaladás grafikon
   // Megjegyzés: Az API nem ad vissza total_enrolled_chapters-t,
