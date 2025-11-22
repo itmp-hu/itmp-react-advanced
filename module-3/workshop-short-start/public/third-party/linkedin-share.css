@@ -1,0 +1,31 @@
+/* Mocked LinkedIn Share Widget – Namespaced with .lisw- */
+.lisw-container { position: relative; z-index: 0; }
+.lisw-backdrop { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); z-index: 9999; }
+.lisw-backdrop.lisw-theme-light { --lisw-bg: #ffffff; --lisw-fg: #0f172a; --lisw-muted: #475569; --lisw-border: #e2e8f0; }
+.lisw-backdrop.lisw-theme-dark  { --lisw-bg: #0b1020; --lisw-fg: #e5e7eb; --lisw-muted: #94a3b8; --lisw-border: #1f2937; }
+
+.lisw-dialog { width: min(560px, 92vw); border-radius: 16px; background: var(--lisw-bg); color: var(--lisw-fg); box-shadow: 0 20px 60px rgba(0,0,0,0.35); outline: none; border: 1px solid var(--lisw-border); }
+.lisw-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--lisw-border); }
+.lisw-title { margin: 0; font-size: 1.125rem; line-height: 1.5; }
+.lisw-close { border: none; background: transparent; font-size: 1.5rem; line-height: 1; cursor: pointer; color: var(--lisw-muted); padding: 4px; }
+.lisw-close:focus { outline: 2px solid #3b82f6; outline-offset: 2px; }
+
+.lisw-body { padding: 0 20px; }
+.lisw-meta { padding: 12px 20px 8px; font-size: 0.95rem; }
+.lisw-meta p { margin: 8px 0; color: var(--lisw-muted); }
+.lisw-meta strong { color: var(--lisw-fg); }
+
+.lisw-footer { display: flex; gap: 12px; padding: 16px 20px 20px; justify-content: flex-end; border-top: 1px solid var(--lisw-border); }
+
+.lisw-btn { appearance: none; border-radius: 10px; padding: 10px 14px; border: 1px solid var(--lisw-border); background: transparent; color: var(--lisw-fg); cursor: pointer; font-weight: 600; }
+.lisw-btn:hover { filter: brightness(1.1); }
+.lisw-btn:focus { outline: 2px solid #3b82f6; outline-offset: 2px; }
+
+.lisw-btn-primary { background: #0a66c2; color: white; border: 1px solid #0a66c2; }
+.lisw-btn-primary:hover { filter: brightness(1.05); }
+
+/* Reduce motion preference */
+@media (prefers-reduced-motion: no-preference) {
+  .lisw-dialog { transition: transform .15s ease, opacity .15s ease; transform: translateY(8px); opacity: .98; }
+  .lisw-backdrop { backdrop-filter: blur(2px); }
+}

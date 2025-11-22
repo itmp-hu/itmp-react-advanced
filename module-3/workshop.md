@@ -725,6 +725,7 @@ import {
   Legend,
 } from "chart.js";
 import { Doughnut } from "react-chartjs-2";
+import { userService } from "../services/api";
 
 // Chart.js komponensek regisztrálása
 ChartJS.register(
@@ -743,27 +744,42 @@ function DashboardPage() {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Az authUser valójában a dashboard adatokat tartalmazza a /users/me-ből
-    if (authUser) {
-      setDashboardData(authUser);
+  const loadData = async () => {
+    setLoading(true);
+
+    try {
+      const response = await userService.getCurrentUser();
+
+      if (response.ok) {
+        const data = await response.json();
+        setDashboardData(data);
+      } else {
+        console.error("Nem sikerült betölteni a felhasználót");
+      }
+    } catch (error) {
+      console.error("Error loading user:", error);
+    } finally {
       setLoading(false);
     }
-  }, [authUser]);
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   if (authLoading || loading) {
     return <div className="page dashboard-page">Betöltés...</div>;
   }
 
-  if (!dashboardData || !dashboardData.email) {
+  if (!dashboardData || !dashboardData.user.email) {
     return <div className="page dashboard-page">Nincs felhasználó</div>;
   }
 
-  const { name, email, stats, credits, recentActivity } = dashboardData;
+  const { user, stats, credits, recentActivity } = dashboardData;
 
   // Kurzus előrehaladás grafikon
-  // Megjegyzés: Az API nem ad vissza total_enrolled_chapters-t,
-  // ezért egyszerűen a completedChapters-t használjuk
+  // Megjegyzés: Az API /users/me endpoint a következő struktúrát adja vissza:
+  // { user: {...}, stats: {...}, credits: X, recentActivity: [...] }
   const completedChapters = stats?.completedChapters || 0;
   const enrolledCourses = stats?.enrolledCourses || 0;
 
@@ -800,12 +816,12 @@ function DashboardPage() {
       <div className="dashboard-content">
         {/* Üdvözlő szekció */}
         <div className="welcome-section">
-          <h2>Üdvözöllek, {name}!</h2>
+          <h2>Üdvözöllek, {user.name}!</h2>
           <p>
-            Email: <strong>{email}</strong>
+            Email: <strong>{user.email}</strong>
           </p>
           <p>
-            Jelenlegi kreditek: <strong>{credits || 0}</strong>
+            Jelenlegi kreditek: <strong>{user.creditBalance || 0}</strong>
           </p>
         </div>
 
@@ -894,36 +910,103 @@ Add hozzá az `src/index.css` fájlhoz:
 /* Dashboard Charts */
 .chart-container {
   background: white;
-  padding: 2rem;
+  padding: 1.5rem;
   border-radius: 0.75rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  min-height: 350px;
+  height: 300px;
+}
+
+.chart-placeholder {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  height: 100%;
+  color: var(--secondary-color);
+  text-align: center;
 }
 
-.chart-container canvas {
-  max-height: 300px;
+.chart-placeholder p {
+  margin-bottom: 1rem;
 }
 
-/* Error message */
+/* Loading States */
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  font-size: 1.125rem;
+  color: var(--secondary-color);
+}
+
 .error-message {
   background-color: #fee2e2;
   border: 1px solid #ef4444;
   color: #991b1b;
   padding: 1rem;
   border-radius: 0.5rem;
+  margin: 1rem 0;
+}
+
+/* Recent Activity */
+.recent-activity {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.recent-activity h3 {
   margin-bottom: 1rem;
 }
 
-/* Test accounts info */
-.test-accounts {
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border-color);
-  text-align: center;
+.activity-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.activity-item {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.activity-item div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.activity-item small {
   color: var(--secondary-color);
+  font-size: 0.75rem;
+}
+
+.credits-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+.credits-badge.success {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.credits-badge.danger {
+  background-color: #fee2e2;
+  color: #991b1b;
 }
 ```
 
@@ -1332,7 +1415,7 @@ export default CourseDetailsPage;
 Add hozzá az `src/index.css` fájlhoz:
 
 ```css
-/* Back link */
+/* Course Details Extended */
 .back-link {
   display: inline-block;
   color: var(--primary-color);
@@ -1345,24 +1428,41 @@ Add hozzá az `src/index.css` fájlhoz:
   text-decoration: underline;
 }
 
-/* Progress bar */
-.progress-bar {
-  width: 100%;
-  height: 8px;
-  background-color: var(--border-color);
-  border-radius: 4px;
-  overflow: hidden;
-  margin-top: 1rem;
+.course-description {
+  color: var(--secondary-color);
+  font-size: 1.125rem;
+  margin: 1rem 0;
 }
 
-.progress-bar-fill {
+.progress-section {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.progress-bar {
+  width: 100%;
+  height: 1.5rem;
+  background-color: var(--bg-color);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  margin: 1rem 0;
+}
+
+.progress-fill {
   height: 100%;
   background-color: var(--success-color);
   transition: width 0.3s ease;
 }
 
-/* Chapter items */
+.chapters-section {
+  margin-top: 2rem;
+}
+
 .chapter-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: 1.5rem;
   border: 1px solid var(--border-color);
   border-radius: 0.5rem;
@@ -1370,35 +1470,37 @@ Add hozzá az `src/index.css` fájlhoz:
   transition: all 0.2s;
 }
 
+.chapter-item:hover {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
 .chapter-item.completed {
   background-color: #f0fdf4;
   border-color: var(--success-color);
 }
 
-.chapter-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.chapter-info h3 {
   margin-bottom: 0.5rem;
+}
+
+.chapter-info p {
+  color: var(--secondary-color);
+  font-size: 0.875rem;
 }
 
 .completed-badge {
   background-color: var(--success-color);
   color: white;
-  padding: 0.25rem 0.75rem;
-  border-radius: 1rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
   font-size: 0.875rem;
   font-weight: 500;
 }
 
-.chapter-credits {
-  color: var(--secondary-color);
-  font-size: 0.875rem;
-  margin: 0.5rem 0;
-}
-
 .linkedin-share-container {
-  margin-top: 0.5rem;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
 }
 ```
 
@@ -1458,12 +1560,13 @@ Módosítsd az `src/pages/MentorsPage.jsx` fájlt:
 ```jsx
 import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { mentorService } from "../services/api";
+import { mentorService, userService } from "../services/api";
 import { usePolling } from "../hooks/usePolling";
 
 function MentorsPage() {
   const { refreshUser } = useAuth();
   const [availableSessions, setAvailableSessions] = useState([]);
+  const [bookedSessions, setBookedSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [bookingId, setBookingId] = useState(null);
@@ -1492,18 +1595,41 @@ function MentorsPage() {
     setLoading(true);
     setError("");
 
-    await loadAvailableSessions();
-
+    try {
+      await Promise.all([loadAvailableSessions(), loadBookedSessions()]);
+    } catch (err) {
+      console.error("Error loading all data:", err);
+    }
     setLoading(false);
+  };
+
+  const loadBookedSessions = async () => {
+    try {
+      const response = await userService.getCurrentUser();
+
+      if (response.ok) {
+        const data = await response.json();
+        const sessions = data.sessions;
+        setBookedSessions(sessions);
+        setError("");
+      } else {
+        setError("Nem sikerült betölteni a foglalásokat");
+      }
+    } catch (error) {
+      console.error("Error loading booked sessions:", error);
+      setError("Hálózati hiba történt");
+    }
   };
 
   useEffect(() => {
     loadAllData();
   }, []);
 
-  // Polling - frissítés 30 másodpercenként
+  // Polling - frissítés 30 másodpercenként (elérhető és foglalt időpontok)
   usePolling(() => {
     loadAvailableSessions();
+    loadBookedSessions();
+    setLastUpdate(new Date());
   }, 30000);
 
   const handleBookSession = async (sessionId) => {
@@ -1560,6 +1686,38 @@ function MentorsPage() {
         <br />
         <small>(Automatikus frissítés 30 másodpercenként)</small>
       </p>
+
+      {bookedSessions.length > 0 && (
+        <section className="booked-sessions">
+          <h2>Foglalt időpontjaim</h2>
+          {bookedSessions.length === 0 ? (
+            <p>Jelenleg nincs foglalásod.</p>
+          ) : (
+            <div className="sessions-grid">
+              {bookedSessions.map((item) => {
+                const s = item.session;
+                return (
+                  <div key={item.id} className="session-card booked">
+                    <div className="session-info">
+                      <h3>{s.mentorName}</h3>
+                      <p>
+                        <strong>Időpont:</strong>{" "}
+                        {formatDateTime(s.sessionDate)}
+                      </p>
+                      <p>
+                        <strong>Állapot:</strong> {item.status}
+                      </p>
+                      <p>
+                        <strong>Költség:</strong> {item.creditsPaid} kredit
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="available-sessions">
         <h2>Elérhető időpontok</h2>
@@ -1638,73 +1796,93 @@ export default MentorsPage;
 Add hozzá az `src/index.css` fájlhoz:
 
 ```css
-/* Polling indicator */
-.polling-indicator {
-  background-color: #eff6ff;
-  border: 1px solid #3b82f6;
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
-  margin-bottom: 2rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.status-badge {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #1e40af;
+/* Mentors Page Extended */
+.mentors-page {
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .last-update {
+  background: #fffbeb;
+  border: 1px solid #fbbf24;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 2rem;
+  color: #92400e;
   font-size: 0.875rem;
-  color: var(--secondary-color);
 }
 
-/* Session cards */
-.session-card {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 0.75rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  margin-bottom: 1rem;
+.available-sessions,
+.booked-sessions {
+  margin-bottom: 3rem;
 }
 
-.session-info h3 {
-  margin-bottom: 0.75rem;
-  color: var(--text-color);
-}
-
-.session-info p {
-  margin: 0.25rem 0;
-}
-
-.session-actions {
-  display: flex;
-  gap: 1rem;
+.sessions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
   margin-top: 1rem;
 }
 
-/* Booking status styles */
-.booking-pending {
-  border-left: 4px solid #f59e0b;
+.session-card {
+  background: white;
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
 }
 
-.booking-confirmed {
-  border-left: 4px solid var(--success-color);
+.session-card:hover {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.booking-rejected {
-  border-left: 4px solid var(--danger-color);
+.session-card.booking-pending {
+  border-color: #fbbf24;
+  background-color: #fffbeb;
 }
 
-.booking-completed {
-  border-left: 4px solid var(--secondary-color);
+.session-card.booking-confirmed {
+  border-color: var(--success-color);
+  background-color: #f0fdf4;
 }
 
-.status-label {
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
+.session-card.booking-rejected {
+  border-color: var(--danger-color);
+  background-color: #fef2f2;
+}
+
+.session-card.booking-completed {
+  border-color: var(--secondary-color);
+  background-color: #f8fafc;
+}
+
+.session-info h3 {
+  color: var(--primary-color);
+  margin-bottom: 1rem;
+}
+
+.session-info p {
+  margin: 0.5rem 0;
+  color: var(--text-color);
+  font-size: 0.9375rem;
+}
+
+.session-info strong {
+  color: var(--text-color);
+  font-weight: 600;
+}
+
+.session-actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 1rem;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.375rem;
   font-size: 0.875rem;
   font-weight: 500;
 }
@@ -1725,8 +1903,8 @@ Add hozzá az `src/index.css` fájlhoz:
 }
 
 .status-completed {
-  background-color: #e2e8f0;
-  color: #475569;
+  background-color: #e0e7ff;
+  color: #3730a3;
 }
 ```
 
@@ -1770,81 +1948,81 @@ A widget automatikusan inicializálódik a `CourseDetailsPage` komponensben, ami
 
 ## 10. lépés - App.jsx frissítése AuthProvider-rel
 
-Végül frissítsük az `App.jsx`-et, hogy az AuthProvider-t használja:
+Végül frissítsük az `App.jsx`-et, hogy az AuthProvider-t és a Data Router-t használja:
 
 ```jsx
-import { Routes, Route, Navigate } from "react-router";
-import { AuthProvider } from "./contexts/AuthContext";
 import Layout from "./components/Layout";
-import ProtectedRoute from "./components/ProtectedRoute";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
 import CoursesPage from "./pages/CoursesPage";
 import CourseDetailsPage from "./pages/CourseDetailsPage";
 import MentorsPage from "./pages/MentorsPage";
+import { createBrowserRouter, RouterProvider, Navigate } from "react-router";
+import authMiddleware from "./middleware/authMiddleware";
+import { AuthProvider } from "./contexts/AuthContext";
+
+const router = createBrowserRouter([
+  // Nyilvános route-ok (Layout nélkül)
+  {
+    path: "/login",
+    element: <LoginPage />,
+  },
+  {
+    path: "/register",
+    element: <RegisterPage />,
+  },
+
+  // Védett route-ok (Layout-tal)
+  {
+    path: "/",
+    element: <Layout />,
+    middleware: [authMiddleware],
+    children: [
+      {
+        index: true, // Főoldal átirányítás dashboard-ra
+        element: <Navigate to="/dashboard" replace />,
+      },
+      {
+        path: "dashboard",
+        element: <DashboardPage />,
+      },
+      {
+        path: "courses",
+        children: [
+          {
+            index: true,
+            element: <CoursesPage />,
+          },
+          {
+            path: ":id",
+            element: <CourseDetailsPage />,
+          },
+        ],
+      },
+      {
+        path: "mentors",
+        element: <MentorsPage />,
+      },
+    ],
+  },
+
+  // 404 - Not Found
+  {
+    path: "*",
+    element: (
+      <div style={{ padding: "2rem", textAlign: "center" }}>
+        <h1>404 - Az oldal nem található</h1>
+        <a href="/login">Vissza a főoldalra</a>
+      </div>
+    ),
+  },
+]);
 
 function App() {
   return (
     <AuthProvider>
-      <Routes>
-        {/* Nyilvános route-ok Layout nélkül */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-
-        {/* Védett route-ok Layout-tal */}
-        <Route element={<Layout />}>
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/courses"
-            element={
-              <ProtectedRoute>
-                <CoursesPage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/courses/:id"
-            element={
-              <ProtectedRoute>
-                <CourseDetailsPage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/mentors"
-            element={
-              <ProtectedRoute>
-                <MentorsPage />
-              </ProtectedRoute>
-            }
-          />
-        </Route>
-
-        {/* Alapértelmezett átirányítás */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
-        {/* 404 - Not Found */}
-        <Route
-          path="*"
-          element={
-            <div style={{ padding: "2rem", textAlign: "center" }}>
-              <h1>404 - Az oldal nem található</h1>
-              <a href="/dashboard">Vissza a főoldalra</a>
-            </div>
-          }
-        />
-      </Routes>
+      <RouterProvider router={router} />
     </AuthProvider>
   );
 }
