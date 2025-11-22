@@ -1,13 +1,16 @@
 import { Outlet } from "react-router";
 import Navigation from "./Navigation";
 
-function Layout({ children }) {
-
+function Layout() {
   return (
     <div className="layout">
-      <header><Navigation /></header>
+      <header>
+        <Navigation />
+      </header>
 
-      <main className="main-content"><Outlet /></main>
+      <main className="main-content">
+        <Outlet />
+      </main>
 
       <footer className="footer">
         <p>&copy; 2025 SkillShare Academy. Minden jog fenntartva.</p>
