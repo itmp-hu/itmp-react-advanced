@@ -1,105 +1,119 @@
-import { createContext, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { createContext, useState, useContext, useEffect } from "react";
 import { authService, userService } from "../services/api";
 
-export const AuthContext = createContext();
+// 1. Context létrehozása
+const AuthContext = createContext();
 
+// 2. Provider komponens
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
   // Token ellenőrzése és felhasználó betöltése oldal betöltéskor
   useEffect(() => {
     async function loadUser() {
-      const token = localStorage.getItem("token");
-      
-      if (token) {
+      const savedToken = localStorage.getItem("token");
+
+      if (savedToken) {
+        setToken(savedToken);
+
         try {
           const response = await userService.getCurrentUser();
-          
+
           if (response.ok) {
             const userData = await response.json();
             setUser(userData);
           } else {
             // Token érvénytelen, töröljük
             localStorage.removeItem("token");
+            setToken(null);
           }
         } catch (error) {
           console.error("Error loading user:", error);
           localStorage.removeItem("token");
+          setToken(null);
         }
       }
-      
+
       setLoading(false);
     }
 
     loadUser();
   }, []);
 
-  // Bejelentkezés
+  // Login függvény
   const login = async (email, password) => {
     try {
       const response = await authService.login(email, password);
 
       if (response.status === 200) {
         const data = await response.json();
-        localStorage.setItem("token", data.token);
+
+        // Token és user mentése
+        setToken(data.token);
         setUser(data.user);
-        navigate("/dashboard");
+        localStorage.setItem("token", data.token);
+
         return { success: true };
       }
 
       if (response.status === 401) {
-        return { success: false, error: "Hibás email vagy jelszó" };
+        throw new Error("Hibás email vagy jelszó");
       }
 
       if (response.status === 422) {
         const data = await response.json();
-        return { success: false, error: data.message || "Validációs hiba" };
+        throw new Error(data.message || "Validációs hiba");
       }
 
-      return { success: false, error: "Hiba történt a bejelentkezés során" };
+      throw new Error("Hiba történt a bejelentkezés során");
     } catch (error) {
       console.error("Login error:", error);
-      return { success: false, error: "Hálózati hiba történt" };
+      throw error;
     }
   };
 
-  // Regisztráció
+  // Register függvény
   const register = async (name, email, password) => {
     try {
       const response = await authService.register(name, email, password);
 
       if (response.status === 201) {
         const data = await response.json();
-        localStorage.setItem("token", data.token);
-        setUser(data.user);
-        navigate("/dashboard");
-        return { success: true };
+        return data;
       }
 
       if (response.status === 400) {
-        return { success: false, error: "A felhasználó már létezik" };
+        throw new Error("A felhasználó már létezik");
       }
 
       if (response.status === 422) {
         const data = await response.json();
-        return { success: false, error: data.message || "Validációs hiba" };
+        throw new Error(data.message || "Validációs hiba");
       }
 
-      return { success: false, error: "Hiba történt a regisztráció során" };
+      throw new Error("Hiba történt a regisztráció során");
     } catch (error) {
       console.error("Register error:", error);
-      return { success: false, error: "Hálózati hiba történt" };
+      throw error;
     }
   };
 
-  // Kijelentkezés
-  const logout = () => {
-    localStorage.removeItem("token");
-    setUser(null);
-    navigate("/login");
+  // Logout függvény
+  const logout = async () => {
+    try {
+      // Hívjuk a backend logout endpoint-ot (token revocation)
+      await authService.logout();
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Ha a backend hívás sikertelen, akkor is töröljük a tokent
+    } finally {
+      // Mindenképp töröljük a tokent a frontenden
+      setToken(null);
+      setUser(null);
+      localStorage.removeItem("token");
+    }
   };
 
   // Felhasználó adatainak frissítése (pl. kredit változás után)
@@ -117,14 +131,25 @@ export function AuthProvider({ children }) {
 
   const value = {
     user,
+    token,
     loading,
     login,
     register,
     logout,
     refreshUser,
-    isAuthenticated: !!user
+    isAuthenticated: !!token,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+// 3. Custom hook a Context használatához
+export function useAuth() {
+  const context = useContext(AuthContext);
+
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+
+  return context;
+}

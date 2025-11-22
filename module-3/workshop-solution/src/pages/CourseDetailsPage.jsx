@@ -1,104 +1,122 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link } from "react-router";
+import { useAuth } from "../contexts/AuthContext";
 import { courseService, chapterService } from "../services/api";
-import { useAuth } from "../hooks/useAuth";
 
 function CourseDetailsPage() {
   const { id } = useParams();
+  const { user, refreshUser } = useAuth();
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [completing, setCompleting] = useState(null); // ID of chapter being completed
-
-  const { refreshUser } = useAuth();
-
-  useEffect(() => {
-    loadCourseDetails();
-  }, [id]);
+  const [error, setError] = useState("");
+  const [enrolling, setEnrolling] = useState(false);
+  const [completingChapterId, setCompletingChapterId] = useState(null);
 
   const loadCourseDetails = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+    setLoading(true);
+    setError("");
 
+    try {
       const response = await courseService.getCourseById(id);
 
       if (response.ok) {
         const data = await response.json();
-        setCourse(data);
+        // Az API { course: {...} } formátumban adja vissza
+        setCourse(data.course || data);
       } else if (response.status === 404) {
         setError("A kurzus nem található");
-      } else if (response.status === 401) {
-        setError("Kérlek jelentkezz be újra");
       } else {
         setError("Nem sikerült betölteni a kurzus adatait");
       }
-    } catch (err) {
+    } catch (error) {
+      console.error("Error loading course:", error);
       setError("Hálózati hiba történt");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCompleteChapter = async (chapterId) => {
+  useEffect(() => {
+    loadCourseDetails();
+  }, [id]);
+
+  const handleEnroll = async () => {
+    setEnrolling(true);
+    setError("");
+
     try {
-      setCompleting(chapterId);
+      const response = await courseService.enrollInCourse(id);
 
-      const response = await chapterService.completeChapter(chapterId);
+      if (response.ok) {
+        // Frissítsd a kurzus adatokat és a felhasználó adatait
+        await loadCourseDetails();
+        await refreshUser();
+      } else if (response.status === 403) {
+        setError("Már beiratkoztál erre a kurzusra");
+      } else {
+        setError("Nem sikerült beiratkozni a kurzusra");
+      }
+    } catch (error) {
+      console.error("Error enrolling:", error);
+      setError("Hálózati hiba történt");
+    } finally {
+      setEnrolling(false);
+    }
+  };
 
-      if (response.status === 200) {
+  const handleCompleteChapter = async (chapterId) => {
+    setCompletingChapterId(chapterId);
+
+    try {
+      const response = await chapterService.completeChapter(id, chapterId);
+
+      if (response.ok) {
         const data = await response.json();
-        alert(`Gratulálunk! +${data.credits_earned} kredit!`);
-        
+        alert(`Gratulálunk! +${data.creditsEarned} kredit!`);
+
         // Frissítsük a kurzus adatokat és a felhasználó adatait
         await loadCourseDetails();
         await refreshUser();
 
-        // LinkedIn share widget inicializálása
-        initLinkedInShare(chapterId);
+        // LinkedIn share widget betöltése
+        loadLinkedInShareWidget(chapterId);
       } else if (response.status === 403) {
-        alert("Ez a fejezet már be van fejezve");
-      } else if (response.status === 404) {
-        alert("A fejezet nem található");
+        alert("Ezt a fejezetet már befejezted");
       } else {
-        alert("Hiba történt a fejezet befejezése során");
+        alert("Nem sikerült befejezni a fejezetet");
       }
     } catch (error) {
+      console.error("Error completing chapter:", error);
       alert("Hálózati hiba történt");
     } finally {
-      setCompleting(null);
+      setCompletingChapterId(null);
     }
   };
 
-  const initLinkedInShare = (chapterId) => {
-    // LinkedIn share widget inicializálása
+  const loadLinkedInShareWidget = (chapterId) => {
     // Ez a widget a public/third-party mappából lesz betöltve
     if (window.LinkedInShare) {
-      const chapter = course.chapters.find(ch => ch.id === chapterId);
-      if (chapter) {
-        window.LinkedInShare.init({
-          elementId: `linkedin-share-${chapterId}`,
-          text: `Befejeztem a "${chapter.title}" fejezetet a SkillShare Academy-n!`,
-          url: window.location.href
-        });
-      }
+      const chapter = course.chapters.find((ch) => ch.id === chapterId);
+      window.LinkedInShare.init({
+        elementId: `linkedin-share-${chapterId}`,
+        text: `Befejeztem a "${chapter.title}" fejezetet a SkillShare Academy-n!`,
+        url: window.location.href,
+      });
     }
   };
 
   if (loading) {
     return (
       <div className="page course-details-page">
-        <p>Betöltés...</p>
+        <div className="loading-spinner">Betöltés...</div>
       </div>
     );
   }
 
-  if (error) {
+  if (error && !course) {
     return (
       <div className="page course-details-page">
-        <div className="error-message">
-          ⚠️ {error}
-        </div>
+        <div className="error-message">⚠️ {error}</div>
         <Link to="/courses" className="btn btn-primary">
           Vissza a kurzusokhoz
         </Link>
@@ -106,95 +124,102 @@ function CourseDetailsPage() {
     );
   }
 
-  if (!course) {
-    return (
-      <div className="page course-details-page">
-        <p>Nincs adat</p>
-      </div>
-    );
-  }
-
-  const completedCount = course.chapters?.filter(ch => ch.completed).length || 0;
+  const completedCount =
+    course.chapters?.filter((ch) => ch.isCompleted).length || 0;
   const totalCount = course.chapters?.length || 0;
-  const completedCredits = course.chapters
-    ?.filter(ch => ch.completed)
-    .reduce((sum, ch) => sum + ch.credits, 0) || 0;
+  const completedCredits =
+    course.chapters
+      ?.filter((ch) => ch.isCompleted)
+      .reduce((sum, ch) => sum + ch.credits, 0) || 0;
 
   return (
     <div className="page course-details-page">
-      {/* Kurzus fejléc */}
       <div className="course-header">
         <Link to="/courses" className="back-link">
           ← Vissza a kurzusokhoz
         </Link>
+
         <h1>{course.title}</h1>
-        <p>{course.description}</p>
-        <div className="progress-info">
-          <p>
-            Előrehaladás: {completedCount}/{totalCount} fejezet
-          </p>
-          <p>
-            Kreditek: {completedCredits}/{course.total_credits}
-          </p>
-        </div>
-        <div className="progress-bar">
-          <div
-            className="progress-bar-fill"
-            style={{ width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%` }}
-          ></div>
-        </div>
-      </div>
+        <p className="course-description">{course.description}</p>
 
-      {/* Fejezetek listája */}
-      <div className="chapters-list">
-        <h2>Fejezetek</h2>
-        {course.chapters && course.chapters.length > 0 ? (
-          course.chapters.map((chapter, index) => (
-            <div
-              key={chapter.id}
-              className={`chapter-item ${chapter.completed ? "completed" : ""}`}
-            >
-              <div className="chapter-header">
-                <h3>
-                  {index + 1}. fejezet - {chapter.title}
-                </h3>
-                {chapter.completed && (
-                  <span className="completed-badge">✓ Befejezve</span>
-                )}
-              </div>
-              <p>{chapter.description}</p>
-              <p className="chapter-credits">Kredit: {chapter.credits}</p>
+        {error && <div className="error-message">⚠️ {error}</div>}
 
-              <div className="chapter-actions">
-                <button className="btn btn-secondary" disabled>
-                  Fejezet megtekintése (később)
-                </button>
+        {!course.isEnrolled && (
+          <button
+            onClick={handleEnroll}
+            disabled={enrolling}
+            className="btn btn-primary"
+          >
+            {enrolling ? "Beiratkozás..." : "Beiratkozás"}
+          </button>
+        )}
 
-                {chapter.completed ? (
-                  <div
-                    id={`linkedin-share-${chapter.id}`}
-                    className="linkedin-share-container"
-                  >
-                    {/* LinkedIn share widget jelenik meg ide */}
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => handleCompleteChapter(chapter.id)}
-                    className="btn btn-primary"
-                    disabled={completing === chapter.id}
-                  >
-                    {completing === chapter.id
-                      ? "Befejezés..."
-                      : "Befejezettnek jelölés"}
-                  </button>
-                )}
-              </div>
+        {course.isEnrolled && (
+          <div className="progress-section">
+            <h3>Előrehaladás</h3>
+            <div className="progress-bar">
+              <div
+                className="progress-fill"
+                style={{
+                  width: `${
+                    totalCount > 0 ? (completedCount / totalCount) * 100 : 0
+                  }%`,
+                }}
+              ></div>
             </div>
-          ))
-        ) : (
-          <p>Ennek a kurzusnak még nincsenek fejezetei.</p>
+            <p>
+              {completedCount} / {totalCount} fejezet befejezve
+            </p>
+            <p>Összegyűjtött kreditek: {completedCredits}</p>
+          </div>
         )}
       </div>
+
+      {course.isEnrolled && (
+        <div className="chapters-section">
+          <h2>Fejezetek</h2>
+          <div className="chapters-list">
+            {course.chapters.map((chapter) => (
+              <div
+                key={chapter.id}
+                className={`chapter-item ${
+                  chapter.isCompleted ? "completed" : ""
+                }`}
+              >
+                <div className="chapter-info">
+                  <h3>
+                    {chapter.isCompleted && "✓ "}
+                    {chapter.title}
+                  </h3>
+                  <p>Jutalom: {chapter.credits} kredit</p>
+                </div>
+                <div className="chapter-actions">
+                  {!chapter.isCompleted && (
+                    <button
+                      onClick={() => handleCompleteChapter(chapter.id)}
+                      disabled={completingChapterId === chapter.id}
+                      className="btn btn-primary"
+                    >
+                      {completingChapterId === chapter.id
+                        ? "Befejezés..."
+                        : "Befejezés"}
+                    </button>
+                  )}
+                  {chapter.isCompleted && (
+                    <div
+                      id={`linkedin-share-${chapter.id}`}
+                      className="linkedin-share-container"
+                    >
+                      {/* LinkedIn Share Widget betöltődik ide */}
+                      <span className="completed-badge">✅ Befejezve</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

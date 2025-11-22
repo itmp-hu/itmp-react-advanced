@@ -1,15 +1,14 @@
-import { Outlet } from 'react-router-dom';
-import Navigation from './Navigation';
+import { Outlet } from "react-router";
+import Navigation from "./Navigation";
 
-function Layout() {
+function Layout({ children }) {
+
   return (
     <div className="layout">
-      <Navigation />
-      
-      <main className="main-content">
-        <Outlet />
-      </main>
-      
+      <header><Navigation /></header>
+
+      <main className="main-content"><Outlet /></main>
+
       <footer className="footer">
         <p>&copy; 2025 SkillShare Academy. Minden jog fenntartva.</p>
       </footer>
@@ -18,4 +17,3 @@ function Layout() {
 }
 
 export default Layout;
-

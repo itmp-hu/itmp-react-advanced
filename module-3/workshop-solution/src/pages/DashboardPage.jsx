@@ -1,5 +1,6 @@
-import { Link } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
+import { useState, useEffect } from "react";
+import { Link } from "react-router";
+import { useAuth } from "../contexts/AuthContext";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -9,9 +10,9 @@ import {
   ArcElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
 } from "chart.js";
-import { Line, Doughnut } from "react-chartjs-2";
+import { Doughnut } from "react-chartjs-2";
 
 // Chart.js komponensek regisztrálása
 ChartJS.register(
@@ -26,71 +27,44 @@ ChartJS.register(
 );
 
 function DashboardPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user: authUser, loading: authLoading } = useAuth();
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  if (authLoading) {
+  useEffect(() => {
+    // Az authUser valójában a dashboard adatokat tartalmazza a /users/me-ből
+    if (authUser) {
+      setDashboardData(authUser);
+      setLoading(false);
+    }
+  }, [authUser]);
+
+  if (authLoading || loading) {
     return <div className="page dashboard-page">Betöltés...</div>;
   }
-
-  if (!user) {
+  console.log({ dashboardData });
+  if (!dashboardData || !dashboardData.email) {
     return <div className="page dashboard-page">Nincs felhasználó</div>;
   }
 
-  // Kredit történet grafikon adatok
-  const creditChartData = {
-    labels: user.credit_history?.map(item => item.date) || [],
-    datasets: [
-      {
-        label: "Összegyűjtött kreditek",
-        data: user.credit_history?.map(item => item.credits) || [],
-        borderColor: "rgb(37, 99, 235)",
-        backgroundColor: "rgba(37, 99, 235, 0.1)",
-        tension: 0.4
-      }
-    ]
-  };
-
-  const creditChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false
-      },
-      title: {
-        display: true,
-        text: "Kredit gyűjtés az elmúlt 30 napban"
-      }
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        title: {
-          display: true,
-          text: "Kreditek"
-        }
-      }
-    }
-  };
+  const { name, email, stats, credits, recentActivity } = dashboardData;
 
   // Kurzus előrehaladás grafikon
-  const completedChapters = user.completed_chapters_count || 0;
-  const totalChapters = user.total_enrolled_chapters || 1; // Megelőzzük a 0-val osztást
-  const remainingChapters = totalChapters - completedChapters;
+  // Megjegyzés: Az API nem ad vissza total_enrolled_chapters-t,
+  // ezért egyszerűen a completedChapters-t használjuk
+  const completedChapters = stats?.completedChapters || 0;
+  const enrolledCourses = stats?.enrolledCourses || 0;
 
   const progressChartData = {
-    labels: ["Befejezett", "Hátralevő"],
+    labels: ["Elvégzett fejezetek", "Beiratkozott kurzusok"],
     datasets: [
       {
-        data: [completedChapters, remainingChapters],
-        backgroundColor: [
-          "rgba(16, 185, 129, 0.8)",
-          "rgba(226, 232, 240, 0.8)"
-        ],
-        borderColor: ["rgb(16, 185, 129)", "rgb(226, 232, 240)"],
-        borderWidth: 2
-      }
-    ]
+        data: [completedChapters, enrolledCourses],
+        backgroundColor: ["rgba(16, 185, 129, 0.8)", "rgba(37, 99, 235, 0.8)"],
+        borderColor: ["rgb(16, 185, 129)", "rgb(37, 99, 235)"],
+        borderWidth: 2,
+      },
+    ],
   };
 
   const progressChartOptions = {
@@ -98,13 +72,13 @@ function DashboardPage() {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: "bottom"
+        position: "bottom",
       },
       title: {
         display: true,
-        text: "Kurzus előrehaladás"
-      }
-    }
+        text: "Statisztikák",
+      },
+    },
   };
 
   return (
@@ -114,9 +88,12 @@ function DashboardPage() {
       <div className="dashboard-content">
         {/* Üdvözlő szekció */}
         <div className="welcome-section">
-          <h2>Üdvözöllek, {user.name}!</h2>
+          <h2>Üdvözöllek, {name}!</h2>
           <p>
-            Jelenlegi kreditek: <strong>{user.credits}</strong>
+            Email: <strong>{email}</strong>
+          </p>
+          <p>
+            Jelenlegi kreditek: <strong>{credits || 0}</strong>
           </p>
         </div>
 
@@ -124,29 +101,30 @@ function DashboardPage() {
         <div className="stats-section">
           <div className="stat-card">
             <h3>Beiratkozott kurzusok</h3>
-            <p className="stat-number">{user.enrolled_courses_count || 0}</p>
+            <p className="stat-number">{enrolledCourses}</p>
           </div>
           <div className="stat-card">
             <h3>Elvégzett fejezetek</h3>
             <p className="stat-number">{completedChapters}</p>
           </div>
+          <div className="stat-card">
+            <h3>Összes szerzett kredit</h3>
+            <p className="stat-number">{stats?.totalCreditsEarned || 0}</p>
+          </div>
+          <div className="stat-card">
+            <h3>Közelgő foglalások</h3>
+            <p className="stat-number">{stats?.upcomingBookings || 0}</p>
+          </div>
         </div>
 
-        {/* Grafikonok */}
+        {/* Grafikon */}
         <div className="charts-section">
           <div className="chart-container">
-            {user.credit_history && user.credit_history.length > 0 ? (
-              <Line data={creditChartData} options={creditChartOptions} />
-            ) : (
-              <div className="chart-placeholder">
-                <p>Még nincs kredit történet</p>
-              </div>
-            )}
-          </div>
-
-          <div className="chart-container">
-            {totalChapters > 0 ? (
-              <Doughnut data={progressChartData} options={progressChartOptions} />
+            {enrolledCourses > 0 || completedChapters > 0 ? (
+              <Doughnut
+                data={progressChartData}
+                options={progressChartOptions}
+              />
             ) : (
               <div className="chart-placeholder">
                 <p>Még nincs beiratkozott kurzusod</p>
@@ -154,6 +132,37 @@ function DashboardPage() {
                   Böngéssz a kurzusok között
                 </Link>
               </div>
+            )}
+          </div>
+
+          {/* Legutóbbi tevékenység */}
+          <div className="recent-activity">
+            <h3>Legutóbbi tevékenység</h3>
+            {recentActivity && recentActivity.length > 0 ? (
+              <ul className="activity-list">
+                {recentActivity.slice(0, 5).map((activity, index) => (
+                  <li key={index} className="activity-item">
+                    <div>
+                      <strong>{activity.description}</strong>
+                      {activity.creditsEarned && (
+                        <span className="credits-badge success">
+                          +{activity.creditsEarned} kredit
+                        </span>
+                      )}
+                      {activity.creditsPaid && (
+                        <span className="credits-badge danger">
+                          -{activity.creditsPaid} kredit
+                        </span>
+                      )}
+                    </div>
+                    <small>
+                      {new Date(activity.timestamp).toLocaleString("hu-HU")}
+                    </small>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>Még nincs tevékenység</p>
             )}
           </div>
         </div>

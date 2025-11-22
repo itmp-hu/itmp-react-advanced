@@ -1,39 +1,33 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef } from "react";
 
-export function usePolling(callback, interval = 30000) {
-  const savedCallback = useRef(callback);
-  const intervalIdRef = useRef(null);
+/**
+ * Custom hook polling-hoz
+ * @param {Function} callback - A függvény, amit rendszeresen hívni kell
+ * @param {number} interval - Az intervallum milliszekundumban (alapértelmezett: 30000 = 30 mp)
+ * @param {boolean} enabled - Engedélyezve van-e a polling (alapértelmezett: true)
+ */
+export function usePolling(callback, interval = 30000, enabled = true) {
+  const savedCallback = useRef();
 
-  // Mindig a legfrissebb callback-et használjuk
+  // Mentsd el a legfrissebb callback-et
   useEffect(() => {
     savedCallback.current = callback;
   }, [callback]);
 
-  const startPolling = useCallback(() => {
-    if (intervalIdRef.current) return; // Már fut
-
-    // Azonnal meghívjuk egyszer
-    savedCallback.current();
-
-    // Elindítjuk az intervallumot
-    intervalIdRef.current = setInterval(() => {
-      savedCallback.current();
-    }, interval);
-  }, [interval]);
-
-  const stopPolling = useCallback(() => {
-    if (intervalIdRef.current) {
-      clearInterval(intervalIdRef.current);
-      intervalIdRef.current = null;
-    }
-  }, []);
-
-  // Automatikus indítás és cleanup
+  // Állítsd be az intervallumot
   useEffect(() => {
-    startPolling();
-    return () => stopPolling();
-  }, [startPolling, stopPolling]);
+    if (!enabled) {
+      return;
+    }
 
-  return { startPolling, stopPolling };
+    function tick() {
+      if (savedCallback.current) {
+        savedCallback.current();
+      }
+    }
+
+    const id = setInterval(tick, interval);
+    return () => clearInterval(id);
+  }, [interval, enabled]);
 }
 

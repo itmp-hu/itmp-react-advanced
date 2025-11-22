@@ -1,89 +1,78 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "../contexts/AuthContext";
 import { mentorService } from "../services/api";
 import { usePolling } from "../hooks/usePolling";
-import { useAuth } from "../hooks/useAuth";
 
 function MentorsPage() {
-  const [availableSessions, setAvailableSessions] = useState([]);
-  const [bookedSessions, setBookedSessions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [booking, setBooking] = useState(null); // ID of session being booked
-  const [lastUpdate, setLastUpdate] = useState(null);
-
   const { refreshUser } = useAuth();
-
-  // Foglalások lekérése
-  const loadBookings = useCallback(async () => {
-    try {
-      const response = await mentorService.getBookedSessions();
-      if (response.ok) {
-        const data = await response.json();
-        setBookedSessions(data);
-        setLastUpdate(new Date());
-      }
-    } catch (error) {
-      console.error("Error loading bookings:", error);
-    }
-  }, []);
-
-  // 30 másodpercenként frissítjük a foglalásokat
-  usePolling(loadBookings, 30000);
-
-  // Elérhető időpontok betöltése
-  useEffect(() => {
-    loadAvailableSessions();
-  }, []);
+  const [availableSessions, setAvailableSessions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [bookingId, setBookingId] = useState(null);
+  const [lastUpdate, setLastUpdate] = useState(new Date());
 
   const loadAvailableSessions = async () => {
     try {
-      setLoading(true);
-      setError(null);
-
       const response = await mentorService.getAvailableSessions();
 
       if (response.ok) {
         const data = await response.json();
-        setAvailableSessions(data);
-      } else if (response.status === 401) {
-        setError("Kérlek jelentkezz be újra");
+        // Az API { sessions: [...] } formátumban adja vissza
+        setAvailableSessions(data.sessions || data);
+        setLastUpdate(new Date());
+        setError("");
       } else {
         setError("Nem sikerült betölteni az elérhető időpontokat");
       }
-    } catch (err) {
+    } catch (error) {
+      console.error("Error loading available sessions:", error);
       setError("Hálózati hiba történt");
-    } finally {
-      setLoading(false);
     }
   };
 
-  const handleBookSession = async (sessionId) => {
-    try {
-      setBooking(sessionId);
+  const loadAllData = async () => {
+    setLoading(true);
+    setError("");
 
+    await loadAvailableSessions();
+
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadAllData();
+  }, []);
+
+  // Polling - frissítés 30 másodpercenként
+  usePolling(() => {
+    loadAvailableSessions();
+  }, 30000);
+
+  const handleBookSession = async (sessionId) => {
+    setBookingId(sessionId);
+    setError("");
+
+    try {
       const response = await mentorService.bookSession(sessionId);
 
-      if (response.status === 200) {
-        alert("Sikeres foglalás! A foglalás megerősítésre vár.");
-        // Frissítsük az adatokat
-        await loadAvailableSessions();
-        await loadBookings();
+      if (response.ok) {
+        const data = await response.json();
+        alert(data.message || "Sikeres foglalás!");
+        // Frissítsd az adatokat és a felhasználó adatait
+        await loadAllData();
         await refreshUser();
       } else if (response.status === 403) {
-        alert("Már foglaltál erre az időpontra");
-      } else if (response.status === 422) {
-        const data = await response.json();
-        alert(data.message || "Nem elég kredit a foglaláshoz");
-      } else if (response.status === 404) {
-        alert("Ez az időpont már nem elérhető");
-        await loadAvailableSessions();
+        alert("Nem elég kredit a foglaláshoz");
+      } else if (response.status === 409) {
+        alert("Ez az időpont már foglalt");
       } else {
-        alert("Hiba történt a foglalás során");
+        alert("Nem sikerült lefoglalni az időpontot");
       }
     } catch (error) {
+      console.error("Error booking session:", error);
       alert("Hálózati hiba történt");
     } finally {
-      setBooking(null);
+      setBookingId(null);
     }
   };
 
@@ -91,7 +80,7 @@ function MentorsPage() {
     return (
       <div className="page mentors-page">
         <h1>Mentor foglalás</h1>
-        <p>Betöltés...</p>
+        <div className="loading-spinner">Betöltés...</div>
       </div>
     );
   }
@@ -100,9 +89,7 @@ function MentorsPage() {
     return (
       <div className="page mentors-page">
         <h1>Mentor foglalás</h1>
-        <div className="error-message">
-          ⚠️ {error}
-        </div>
+        <div className="error-message">⚠️ {error}</div>
       </div>
     );
   }
@@ -110,98 +97,78 @@ function MentorsPage() {
   return (
     <div className="page mentors-page">
       <h1>Mentor foglalás</h1>
+      <p className="last-update">
+        Utolsó frissítés: {lastUpdate.toLocaleTimeString()}
+        <br />
+        <small>(Automatikus frissítés 30 másodpercenként)</small>
+      </p>
 
-      {/* Polling indikátor */}
-      <div className="polling-indicator">
-        <span className="status-badge">
-          🔄 Automatikus frissítés aktív (30 mp)
-        </span>
-        {lastUpdate && (
-          <span className="last-update">
-            Utolsó frissítés: {lastUpdate.toLocaleTimeString()}
-          </span>
-        )}
-      </div>
-
-      {/* Elérhető időpontok */}
-      <div className="mentors-section">
+      <section className="available-sessions">
         <h2>Elérhető időpontok</h2>
         {availableSessions.length === 0 ? (
-          <p>Jelenleg nincs elérhető időpont</p>
+          <p>Jelenleg nincs elérhető időpont.</p>
         ) : (
-          availableSessions.map((session) => (
-            <div key={session.id} className="session-card">
-              <div className="session-info">
-                <h3>{session.mentor_name}</h3>
-                <p><strong>Időpont:</strong> {formatDateTime(session.session_time)}</p>
-                <p><strong>Időtartam:</strong> {session.duration_minutes} perc</p>
-                <p><strong>Költség:</strong> {session.cost_credits} kredit</p>
-                <p><strong>Szakterület:</strong> {session.expertise}</p>
+          <div className="sessions-grid">
+            {availableSessions.map((session) => (
+              <div key={session.id} className="session-card">
+                <div className="session-info">
+                  <h3>{session.mentorName}</h3>
+                  <p>
+                    <strong>Időpont:</strong>{" "}
+                    {formatDateTime(session.sessionDate)}
+                  </p>
+                  <p>
+                    <strong>Időtartam:</strong> {session.durationMinutes} perc
+                  </p>
+                  <p>
+                    <strong>Költség:</strong> {session.creditCost} kredit
+                  </p>
+                  <p>
+                    <strong>Szakterület:</strong> {session.expertise}
+                  </p>
+                  <p>
+                    <strong>Szint:</strong> {getExperienceLabel(session.experienceLevel)}
+                  </p>
+                </div>
+                <div className="session-actions">
+                  <button
+                    onClick={() => handleBookSession(session.id)}
+                    disabled={bookingId === session.id || !session.isAvailable}
+                    className="btn btn-primary"
+                  >
+                    {bookingId === session.id
+                      ? "Foglalás..."
+                      : !session.isAvailable
+                      ? "Nem elérhető"
+                      : "Foglalás"}
+                  </button>
+                </div>
               </div>
-              <div className="session-actions">
-                <button className="btn btn-secondary" disabled>
-                  Profil megtekintése (később)
-                </button>
-                <button
-                  onClick={() => handleBookSession(session.id)}
-                  className="btn btn-primary"
-                  disabled={booking === session.id}
-                >
-                  {booking === session.id ? "Foglalás..." : "Foglalás"}
-                </button>
-              </div>
-            </div>
-          ))
+            ))}
+          </div>
         )}
-      </div>
-
-      {/* Foglalt időpontok */}
-      <div className="booked-sessions">
-        <h2>Foglalt időpontjaim</h2>
-        {bookedSessions.length === 0 ? (
-          <p>Még nincs foglalt időpontod.</p>
-        ) : (
-          bookedSessions.map((booking) => (
-            <div key={booking.id} className={`session-card booking-${booking.status}`}>
-              <div className="session-info">
-                <h3>{booking.mentor_name}</h3>
-                <p><strong>Időpont:</strong> {formatDateTime(booking.session_time)}</p>
-                <p><strong>Időtartam:</strong> {booking.duration_minutes} perc</p>
-                <p><strong>Költség:</strong> {booking.cost_credits} kredit</p>
-                <p>
-                  <strong>Státusz:</strong>{" "}
-                  <span className={`status-label status-${booking.status}`}>
-                    {getStatusLabel(booking.status)}
-                  </span>
-                </p>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+      </section>
     </div>
   );
 }
 
-function formatDateTime(dateTimeString) {
-  const date = new Date(dateTimeString);
-  return date.toLocaleString("hu-HU", {
+function formatDateTime(dateString) {
+  return new Date(dateString).toLocaleString("hu-HU", {
     year: "numeric",
     month: "long",
     day: "numeric",
     hour: "2-digit",
-    minute: "2-digit"
+    minute: "2-digit",
   });
 }
 
-function getStatusLabel(status) {
+function getExperienceLabel(level) {
   const labels = {
-    pending: "Függőben",
-    confirmed: "Megerősítve",
-    rejected: "Elutasítva",
-    completed: "Befejezve"
+    junior: "Junior",
+    mid: "Mid-level",
+    senior: "Senior",
   };
-  return labels[status] || status;
+  return labels[level] || level;
 }
 
 export default MentorsPage;

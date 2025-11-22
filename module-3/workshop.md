@@ -17,6 +17,23 @@
 
 ## Előkészületek
 
+### Kiindulási állapot
+
+Győződj meg róla, hogy az 1-2. modul befejezett állapotában vagy:
+
+✅ React Router telepítve és működik (Module 1)  
+✅ AuthContext implementálva mock service-szel (Module 2)  
+✅ LoginPage, RegisterPage, Navigation, Dashboard működik (Module 2)  
+✅ authMiddleware implementálva (Module 1)  
+✅ Token perzisztencia localStorage-ban (Module 2)
+
+> [!NOTE] > **Module 2 → Module 3 átmenet:**
+>
+> - A mock `authService.js`-t lecseréljük valódi API service-re (`api.js`)
+> - Az AuthContext logikája **NEM** változik (továbbra sem használ `useNavigate`-et)
+> - A komponensek továbbra is kezelik a navigációt
+> - A token kezelés változatlan marad
+
 ### Backend indítása
 
 1. Győződj meg róla, hogy a backend fut:
@@ -47,118 +64,129 @@ npm install chart.js react-chartjs-2
 
 ## 1. lépés - API Service Layer létrehozása
 
-Most létrehozzuk az API service réteget, amely központosítja az összes backend kommunikációt.
+Most lecseréljük a mock `authService.js`-t valódi API service-re, amely központosítja az összes backend kommunikációt.
 
-### API service létrehozása
+> [!NOTE]
+> A Module 2-ben egy **mock** `authService.js`-t használtunk. Most ezt fogjuk lecserélni egy valódi API service-re, amely a backend API-t hívja.
 
-Hozz létre egy `src/services/api.js` fájlt:
+### Mock authService.js törlése és új API service létrehozása
+
+1. **Töröld** a `src/services/authService.js` fájlt (ez a mock service volt)
+2. **Hozz létre** egy új `src/services/api.js` fájlt:
 
 ```javascript
-const API_BASE_URL = 'http://localhost:5000/api/v1';
+const API_BASE_URL = "http://localhost:5000/api/v1";
 
 // Helper függvény a hitelesítéshez szükséges headerek összeállításához
 function getAuthHeaders() {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem("token");
   return {
-    'X-API': token,
-    'Content-Type': 'application/json'
+    "X-API-TOKEN": token,
+    "Content-Type": "application/json",
   };
 }
 
 // Hitelesítési szolgáltatások
 export const authService = {
   async login(email, password) {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: 'POST',
+    const response = await fetch(`${API_BASE_URL}/users/login`, {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ email, password }),
     });
     return response;
   },
 
   async register(name, email, password) {
-    const response = await fetch(`${API_BASE_URL}/auth/register`, {
-      method: 'POST',
+    const response = await fetch(`${API_BASE_URL}/users/register`, {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ name, email, password })
+      body: JSON.stringify({ name, email, password }),
     });
     return response;
-  }
+  },
+
+  async logout() {
+    const response = await fetch(`${API_BASE_URL}/users/logout`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+    });
+    return response;
+  },
 };
 
 // Felhasználói szolgáltatások
 export const userService = {
   async getCurrentUser() {
     const response = await fetch(`${API_BASE_URL}/users/me`, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
     });
     return response;
-  }
+  },
 };
 
 // Kurzus szolgáltatások
 export const courseService = {
   async getAllCourses() {
     const response = await fetch(`${API_BASE_URL}/courses`, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
     });
     return response;
   },
 
   async getCourseById(id) {
     const response = await fetch(`${API_BASE_URL}/courses/${id}`, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
     });
     return response;
   },
 
   async enrollInCourse(id) {
     const response = await fetch(`${API_BASE_URL}/courses/${id}/enroll`, {
-      method: 'POST',
-      headers: getAuthHeaders()
+      method: "POST",
+      headers: getAuthHeaders(),
     });
     return response;
-  }
+  },
 };
 
 // Fejezet szolgáltatások
 export const chapterService = {
-  async completeChapter(id) {
-    const response = await fetch(`${API_BASE_URL}/chapters/${id}/complete`, {
-      method: 'POST',
-      headers: getAuthHeaders()
-    });
+  async completeChapter(courseId, chapterId) {
+    const response = await fetch(
+      `${API_BASE_URL}/courses/${courseId}/chapters/${chapterId}/complete`,
+      {
+        method: "POST",
+        headers: getAuthHeaders(),
+      }
+    );
     return response;
-  }
+  },
 };
 
 // Mentor szolgáltatások
 export const mentorService = {
   async getAvailableSessions() {
-    const response = await fetch(`${API_BASE_URL}/mentor-sessions`, {
-      headers: getAuthHeaders()
+    const response = await fetch(`${API_BASE_URL}/mentors/sessions`, {
+      headers: getAuthHeaders(),
     });
     return response;
   },
 
   async bookSession(id) {
-    const response = await fetch(`${API_BASE_URL}/mentor-sessions/${id}/book`, {
-      method: 'POST',
-      headers: getAuthHeaders()
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/mentors/sessions/${id}/book`,
+      {
+        method: "POST",
+        headers: getAuthHeaders(),
+      }
+    );
     return response;
   },
-
-  async getBookedSessions() {
-    const response = await fetch(`${API_BASE_URL}/mentor-sessions/booked`, {
-      headers: getAuthHeaders()
-    });
-    return response;
-  }
 };
 ```
 
@@ -167,115 +195,135 @@ export const mentorService = {
 
 ## 2. lépés - AuthContext frissítése valódi API-val
 
-Most frissítjük az AuthContext-et, hogy a valódi backend API-t használja.
+Most frissítjük az AuthContext-et, hogy a valódi backend API-t használja a mock service helyett.
+
+> [!IMPORTANT] > **Fontos változás a Module 2-höz képest:**
+>
+> - A mock `authService` importját lecseréljük a valódi API service-re
+> - Az AuthContext logikája **NEM** változik - továbbra is **NEM** használ `useNavigate`-et
+> - A komponensek továbbra is kezelik a navigációt
 
 ### AuthContext frissítése
 
 Módosítsd az `src/contexts/AuthContext.jsx` fájlt:
 
 ```jsx
-import { createContext, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { createContext, useState, useContext, useEffect } from "react";
 import { authService, userService } from "../services/api";
 
-export const AuthContext = createContext();
+// 1. Context létrehozása
+const AuthContext = createContext();
 
+// 2. Provider komponens
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
   // Token ellenőrzése és felhasználó betöltése oldal betöltéskor
   useEffect(() => {
     async function loadUser() {
-      const token = localStorage.getItem("token");
-      
-      if (token) {
+      const savedToken = localStorage.getItem("token");
+
+      if (savedToken) {
+        setToken(savedToken);
+
         try {
           const response = await userService.getCurrentUser();
-          
+
           if (response.ok) {
             const userData = await response.json();
             setUser(userData);
           } else {
             // Token érvénytelen, töröljük
             localStorage.removeItem("token");
+            setToken(null);
           }
         } catch (error) {
           console.error("Error loading user:", error);
           localStorage.removeItem("token");
+          setToken(null);
         }
       }
-      
+
       setLoading(false);
     }
 
     loadUser();
   }, []);
 
-  // Bejelentkezés
+  // Login függvény
   const login = async (email, password) => {
     try {
       const response = await authService.login(email, password);
 
       if (response.status === 200) {
         const data = await response.json();
-        localStorage.setItem("token", data.token);
+
+        // Token és user mentése
+        setToken(data.token);
         setUser(data.user);
-        navigate("/dashboard");
+        localStorage.setItem("token", data.token);
+
         return { success: true };
       }
 
       if (response.status === 401) {
-        return { success: false, error: "Hibás email vagy jelszó" };
+        throw new Error("Hibás email vagy jelszó");
       }
 
       if (response.status === 422) {
         const data = await response.json();
-        return { success: false, error: data.message || "Validációs hiba" };
+        throw new Error(data.message || "Validációs hiba");
       }
 
-      return { success: false, error: "Hiba történt a bejelentkezés során" };
+      throw new Error("Hiba történt a bejelentkezés során");
     } catch (error) {
       console.error("Login error:", error);
-      return { success: false, error: "Hálózati hiba történt" };
+      throw error;
     }
   };
 
-  // Regisztráció
+  // Register függvény
   const register = async (name, email, password) => {
     try {
       const response = await authService.register(name, email, password);
 
       if (response.status === 201) {
         const data = await response.json();
-        localStorage.setItem("token", data.token);
-        setUser(data.user);
-        navigate("/dashboard");
-        return { success: true };
+        return data;
       }
 
       if (response.status === 400) {
-        return { success: false, error: "A felhasználó már létezik" };
+        throw new Error("A felhasználó már létezik");
       }
 
       if (response.status === 422) {
         const data = await response.json();
-        return { success: false, error: data.message || "Validációs hiba" };
+        throw new Error(data.message || "Validációs hiba");
       }
 
-      return { success: false, error: "Hiba történt a regisztráció során" };
+      throw new Error("Hiba történt a regisztráció során");
     } catch (error) {
       console.error("Register error:", error);
-      return { success: false, error: "Hálózati hiba történt" };
+      throw error;
     }
   };
 
-  // Kijelentkezés
-  const logout = () => {
-    localStorage.removeItem("token");
-    setUser(null);
-    navigate("/login");
+  // Logout függvény
+  const logout = async () => {
+    try {
+      // Hívjuk a backend logout endpoint-ot (token revocation)
+      await authService.logout();
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Ha a backend hívás sikertelen, akkor is töröljük a tokent
+    } finally {
+      // Mindenképp töröljük a tokent a frontenden
+      setToken(null);
+      setUser(null);
+      localStorage.removeItem("token");
+    }
   };
 
   // Felhasználó adatainak frissítése (pl. kredit változás után)
@@ -293,83 +341,115 @@ export function AuthProvider({ children }) {
 
   const value = {
     user,
+    token,
     loading,
     login,
     register,
     logout,
     refreshUser,
-    isAuthenticated: !!user
+    isAuthenticated: !!token,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
-```
 
-### useAuth hook használata
-
-Az `src/hooks/useAuth.js` fájl változatlan marad:
-
-```jsx
-import { useContext } from "react";
-import { AuthContext } from "../contexts/AuthContext";
-
+// 3. Custom hook a Context használatához
 export function useAuth() {
   const context = useContext(AuthContext);
-  
-  if (!context) {
+
+  if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
-  
+
   return context;
 }
 ```
 
-## 3. lépés - LoginPage frissítése
+> [!NOTE] > **Fontos különbségek a Module 2 mock service-hez képest:**
+>
+> - A mock service azonnal visszaadta az eredményt, a valódi API HTTP státuszkódokat ad vissza
+> - A `login()` és `register()` továbbra sem navigál - ezt a komponensek kezelik
+> - A `userService.getCurrentUser()` mostantól a backend-től kéri le a user adatokat
+> - A `refreshUser()` függvény lehetővé teszi a user adatok frissítését (pl. kredit változás után)
 
-Most frissítjük a LoginPage-et, hogy a valódi API-t és AuthContext-et használja.
+## 3. lépés - LoginPage és RegisterPage frissítése
 
-Módosítsd az `src/pages/LoginPage.jsx` fájlt:
+Most frissítjük a LoginPage és RegisterPage-et, hogy a valódi API-t használják.
+
+> [!NOTE] > **Változás a Module 2-höz képest:**
+>
+> - Az `authService` importot **töröljük** (ezt már az AuthContext használja)
+> - A komponens továbbra is kezeli a navigációt a sikeres login/register után
+
+### LoginPage frissítése
+
+Módosítsd az `src/pages/LoginPage.jsx` fájlt - **töröld** a régi `authService` importot:
 
 ```jsx
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
+import { Link, useNavigate } from "react-router";
+import { useAuth } from "../contexts/AuthContext";
 
 function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
-  
+
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // Ha már be van jelentkezve, irányítsuk át
+  // Ha már be van jelentkezve, irányítsuk a dashboard-ra
   useEffect(() => {
     if (isAuthenticated) {
       navigate("/dashboard");
     }
   }, [isAuthenticated, navigate]);
 
+  // Form validáció
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!email) {
+      newErrors.email = "Az email cím kötelező";
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = "Érvénytelen email formátum";
+    }
+
+    if (!password) {
+      newErrors.password = "A jelszó kötelező";
+    } else if (password.length < 6) {
+      newErrors.password =
+        "A jelszónak legalább 6 karakter hosszúnak kell lennie";
+    }
+
+    return newErrors;
+  };
+
+  // Form elküldés
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setLoading(true);
+    setServerError("");
 
-    // Egyszerű validáció
-    if (!email || !password) {
-      setError("Minden mező kitöltése kötelező");
-      setLoading(false);
+    // Validáció
+    const validationErrors = validateForm();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
       return;
     }
 
-    const result = await login(email, password);
-
-    if (!result.success) {
-      setError(result.error);
+    // Login API hívás (az AuthContext-en keresztül)
+    setLoading(true);
+    try {
+      await login(email, password);
+      // Sikeres login után navigáció a komponensben!
+      navigate("/dashboard");
+    } catch (error) {
+      setServerError(error.message);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
@@ -378,11 +458,7 @@ function LoginPage() {
         <h1>Bejelentkezés</h1>
         <p>SkillShare Academy tanulási platform</p>
 
-        {error && (
-          <div className="error-message">
-            ⚠️ {error}
-          </div>
-        )}
+        {serverError && <div className="alert alert-error">{serverError}</div>}
 
         <form className="login-form" onSubmit={handleSubmit}>
           <div className="form-group">
@@ -390,11 +466,19 @@ function LoginPage() {
             <input
               type="email"
               id="email"
+              name="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (errors.email) {
+                  setErrors((prev) => ({ ...prev, email: "" }));
+                }
+              }}
+              className={errors.email ? "input-error" : ""}
               placeholder="email@példa.hu"
               disabled={loading}
             />
+            {errors.email && <span className="error-text">{errors.email}</span>}
           </div>
 
           <div className="form-group">
@@ -402,11 +486,21 @@ function LoginPage() {
             <input
               type="password"
               id="password"
+              name="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (errors.password) {
+                  setErrors((prev) => ({ ...prev, password: "" }));
+                }
+              }}
+              className={errors.password ? "input-error" : ""}
               placeholder="Jelszó"
               disabled={loading}
             />
+            {errors.password && (
+              <span className="error-text">{errors.password}</span>
+            )}
           </div>
 
           <button type="submit" className="btn btn-primary" disabled={loading}>
@@ -418,9 +512,21 @@ function LoginPage() {
           Még nincs fiókod? <Link to="/register">Regisztrálj ingyen!</Link>
         </p>
 
-        <div className="test-accounts">
-          <p><small>Teszt fiókok (jelszó: password123):</small></p>
-          <p><small>alice.smith@example.com</small></p>
+        <div
+          style={{
+            marginTop: "2rem",
+            padding: "1rem",
+            backgroundColor: "#f0f9ff",
+            borderRadius: "0.5rem",
+          }}
+        >
+          <p style={{ fontSize: "0.875rem", color: "#0369a1" }}>
+            <strong>Teszt bejelentkezés:</strong>
+            <br />
+            Email: alice.smith@example.com
+            <br />
+            Jelszó: password123
+          </p>
         </div>
       </div>
     </div>
@@ -430,140 +536,169 @@ function LoginPage() {
 export default LoginPage;
 ```
 
-## 4. lépés - RegisterPage frissítése
+### RegisterPage frissítése
 
-Módosítsd az `src/pages/RegisterPage.jsx` fájlt:
+A RegisterPage frissítése hasonló a LoginPage-hez - **töröld** a régi `authService` importot és használd az AuthContext-et:
+
+> [!NOTE]
+> A RegisterPage a Module 2-ben már készen van, csak az import-ot kell frissíteni.
+> A komponens továbbra is kezeli a navigációt a sikeres regisztráció után (2 másodperc delay után navigate("/login")).
 
 ```jsx
-import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router";
+import { useAuth } from "../contexts/AuthContext";
 
 function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  
+
   const { register, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate("/dashboard");
+  // Ha már be van jelentkezve, irányítsuk a dashboard-ra
+  if (isAuthenticated) {
+    navigate("/dashboard");
+  }
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!name) {
+      newErrors.name = "A név kötelező";
+    } else if (name.length < 3) {
+      newErrors.name = "A névnek legalább 3 karakter hosszúnak kell lennie";
     }
-  }, [isAuthenticated, navigate]);
+
+    if (!email) {
+      newErrors.email = "Az email cím kötelező";
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = "Érvénytelen email formátum";
+    }
+
+    if (!password) {
+      newErrors.password = "A jelszó kötelező";
+    } else if (password.length < 8) {
+      newErrors.password =
+        "A jelszónak legalább 8 karakter hosszúnak kell lennie";
+    }
+
+    if (!confirmPassword) {
+      newErrors.confirmPassword = "A jelszó megerősítése kötelező";
+    } else if (password !== confirmPassword) {
+      newErrors.confirmPassword = "A két jelszó nem egyezik";
+    }
+
+    return newErrors;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setLoading(true);
+    setServerError("");
+    setSuccessMessage("");
 
     // Validáció
-    if (!name || !email || !password || !confirmPassword) {
-      setError("Minden mező kitöltése kötelező");
-      setLoading(false);
+    const validationErrors = validateForm();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
       return;
     }
 
-    if (password !== confirmPassword) {
-      setError("A jelszavak nem egyeznek");
+    // Register API hívás (az AuthContext-en keresztül)
+    setLoading(true);
+    try {
+      const result = await register(name, email, password);
+      setSuccessMessage(result.message || "Sikeres regisztráció!");
+      // 2 másodperc után átirányítás - a komponensben!
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
+    } catch (error) {
+      setServerError(error.message);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    if (password.length < 6) {
-      setError("A jelszónak legalább 6 karakter hosszúnak kell lennie");
-      setLoading(false);
-      return;
-    }
-
-    const result = await register(name, email, password);
-
-    if (!result.success) {
-      setError(result.error);
-    }
-
-    setLoading(false);
   };
 
-  return (
-    <div className="page register-page">
-      <div className="register-container">
-        <h1>Regisztráció</h1>
-        <p>Ingyenes regisztráció</p>
-
-        {error && (
-          <div className="error-message">
-            ⚠️ {error}
-          </div>
-        )}
-
-        <form className="register-form" onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="name">Teljes név</label>
-            <input
-              type="text"
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Kovács János"
-              disabled={loading}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="email">Email cím</label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="email@példa.hu"
-              disabled={loading}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="password">Jelszó</label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Legalább 6 karakter"
-              disabled={loading}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="confirmPassword">Jelszó megerősítése</label>
-            <input
-              type="password"
-              id="confirmPassword"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Jelszó újra"
-              disabled={loading}
-            />
-          </div>
-
-          <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? "Regisztráció..." : "Regisztráció"}
-          </button>
-        </form>
-
-        <p className="login-link">
-          Már van fiókod? <Link to="/login">Jelentkezz be!</Link>
-        </p>
-      </div>
-    </div>
-  );
+  // ... (JSX return ugyanaz mint a Module 2-ben, error handling-gel)
 }
 
 export default RegisterPage;
+```
+
+> [!TIP]
+> A teljes RegisterPage komponens megegyezik a Module 2-ben implementálttal, csak az `authService` importját cseréltük le `useAuth`-ra.
+
+## 4. lépés - Navigation frissítése
+
+A Navigation komponenst is frissíteni kell, hogy a logout után navigáljon.
+
+Módosítsd az `src/components/Navigation.jsx` fájlt:
+
+```jsx
+import { NavLink, useNavigate } from "react-router";
+import { useAuth } from "../contexts/AuthContext";
+
+function Navigation() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    if (window.confirm("Biztosan ki szeretnél jelentkezni?")) {
+      await logout();
+      navigate("/login"); // Navigáció a komponensben történik!
+    }
+  };
+
+  return (
+    <nav className="navigation">
+      <div className="nav-brand">
+        <h2>SkillShare Academy</h2>
+      </div>
+
+      <div className="nav-links">
+        <span className="user-greeting">
+          Szia, {user?.name || "Felhasználó"}!
+        </span>
+        <NavLink
+          to="/dashboard"
+          className={({ isActive }) =>
+            isActive ? "nav-link active" : "nav-link"
+          }
+        >
+          Dashboard
+        </NavLink>
+        <NavLink
+          to="/courses"
+          className={({ isActive }) =>
+            isActive ? "nav-link active" : "nav-link"
+          }
+        >
+          Kurzusok
+        </NavLink>
+        <NavLink
+          to="/mentors"
+          className={({ isActive }) =>
+            isActive ? "nav-link active" : "nav-link"
+          }
+        >
+          Mentorok
+        </NavLink>
+        <button onClick={handleLogout} className="btn btn-secondary">
+          Kijelentkezés
+        </button>
+      </div>
+    </nav>
+  );
+}
+
+export default Navigation;
 ```
 
 ## 5. lépés - Dashboard Chart.js-szel
@@ -576,8 +711,8 @@ Módosítsd az `src/pages/DashboardPage.jsx` fájlt:
 
 ```jsx
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
+import { Link } from "react-router";
+import { useAuth } from "../contexts/AuthContext";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -587,9 +722,9 @@ import {
   ArcElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
 } from "chart.js";
-import { Line, Doughnut } from "react-chartjs-2";
+import { Doughnut } from "react-chartjs-2";
 
 // Chart.js komponensek regisztrálása
 ChartJS.register(
@@ -604,71 +739,44 @@ ChartJS.register(
 );
 
 function DashboardPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user: authUser, loading: authLoading } = useAuth();
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  if (authLoading) {
+  useEffect(() => {
+    // Az authUser valójában a dashboard adatokat tartalmazza a /users/me-ből
+    if (authUser) {
+      setDashboardData(authUser);
+      setLoading(false);
+    }
+  }, [authUser]);
+
+  if (authLoading || loading) {
     return <div className="page dashboard-page">Betöltés...</div>;
   }
 
-  if (!user) {
+  if (!dashboardData || !dashboardData.email) {
     return <div className="page dashboard-page">Nincs felhasználó</div>;
   }
 
-  // Kredit történet grafikon adatok
-  const creditChartData = {
-    labels: user.credit_history?.map(item => item.date) || [],
-    datasets: [
-      {
-        label: "Összegyűjtött kreditek",
-        data: user.credit_history?.map(item => item.credits) || [],
-        borderColor: "rgb(37, 99, 235)",
-        backgroundColor: "rgba(37, 99, 235, 0.1)",
-        tension: 0.4
-      }
-    ]
-  };
-
-  const creditChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false
-      },
-      title: {
-        display: true,
-        text: "Kredit gyűjtés az elmúlt 30 napban"
-      }
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        title: {
-          display: true,
-          text: "Kreditek"
-        }
-      }
-    }
-  };
+  const { name, email, stats, credits, recentActivity } = dashboardData;
 
   // Kurzus előrehaladás grafikon
-  const completedChapters = user.completed_chapters_count || 0;
-  const totalChapters = user.total_enrolled_chapters || 1; // Megelőzzük a 0-val osztást
-  const remainingChapters = totalChapters - completedChapters;
+  // Megjegyzés: Az API nem ad vissza total_enrolled_chapters-t,
+  // ezért egyszerűen a completedChapters-t használjuk
+  const completedChapters = stats?.completedChapters || 0;
+  const enrolledCourses = stats?.enrolledCourses || 0;
 
   const progressChartData = {
-    labels: ["Befejezett", "Hátralevő"],
+    labels: ["Elvégzett fejezetek", "Beiratkozott kurzusok"],
     datasets: [
       {
-        data: [completedChapters, remainingChapters],
-        backgroundColor: [
-          "rgba(16, 185, 129, 0.8)",
-          "rgba(226, 232, 240, 0.8)"
-        ],
-        borderColor: ["rgb(16, 185, 129)", "rgb(226, 232, 240)"],
-        borderWidth: 2
-      }
-    ]
+        data: [completedChapters, enrolledCourses],
+        backgroundColor: ["rgba(16, 185, 129, 0.8)", "rgba(37, 99, 235, 0.8)"],
+        borderColor: ["rgb(16, 185, 129)", "rgb(37, 99, 235)"],
+        borderWidth: 2,
+      },
+    ],
   };
 
   const progressChartOptions = {
@@ -676,13 +784,13 @@ function DashboardPage() {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: "bottom"
+        position: "bottom",
       },
       title: {
         display: true,
-        text: "Kurzus előrehaladás"
-      }
-    }
+        text: "Statisztikák",
+      },
+    },
   };
 
   return (
@@ -692,9 +800,12 @@ function DashboardPage() {
       <div className="dashboard-content">
         {/* Üdvözlő szekció */}
         <div className="welcome-section">
-          <h2>Üdvözöllek, {user.name}!</h2>
+          <h2>Üdvözöllek, {name}!</h2>
           <p>
-            Jelenlegi kreditek: <strong>{user.credits}</strong>
+            Email: <strong>{email}</strong>
+          </p>
+          <p>
+            Jelenlegi kreditek: <strong>{credits || 0}</strong>
           </p>
         </div>
 
@@ -702,29 +813,30 @@ function DashboardPage() {
         <div className="stats-section">
           <div className="stat-card">
             <h3>Beiratkozott kurzusok</h3>
-            <p className="stat-number">{user.enrolled_courses_count || 0}</p>
+            <p className="stat-number">{enrolledCourses}</p>
           </div>
           <div className="stat-card">
             <h3>Elvégzett fejezetek</h3>
             <p className="stat-number">{completedChapters}</p>
           </div>
+          <div className="stat-card">
+            <h3>Összes szerzett kredit</h3>
+            <p className="stat-number">{stats?.totalCreditsEarned || 0}</p>
+          </div>
+          <div className="stat-card">
+            <h3>Közelgő foglalások</h3>
+            <p className="stat-number">{stats?.upcomingBookings || 0}</p>
+          </div>
         </div>
 
-        {/* Grafikonok */}
+        {/* Grafikon */}
         <div className="charts-section">
           <div className="chart-container">
-            {user.credit_history && user.credit_history.length > 0 ? (
-              <Line data={creditChartData} options={creditChartOptions} />
-            ) : (
-              <div className="chart-placeholder">
-                <p>Még nincs kredit történet</p>
-              </div>
-            )}
-          </div>
-
-          <div className="chart-container">
-            {totalChapters > 0 ? (
-              <Doughnut data={progressChartData} options={progressChartOptions} />
+            {enrolledCourses > 0 || completedChapters > 0 ? (
+              <Doughnut
+                data={progressChartData}
+                options={progressChartOptions}
+              />
             ) : (
               <div className="chart-placeholder">
                 <p>Még nincs beiratkozott kurzusod</p>
@@ -732,6 +844,37 @@ function DashboardPage() {
                   Böngéssz a kurzusok között
                 </Link>
               </div>
+            )}
+          </div>
+
+          {/* Legutóbbi tevékenység */}
+          <div className="recent-activity">
+            <h3>Legutóbbi tevékenység</h3>
+            {recentActivity && recentActivity.length > 0 ? (
+              <ul className="activity-list">
+                {recentActivity.slice(0, 5).map((activity, index) => (
+                  <li key={index} className="activity-item">
+                    <div>
+                      <strong>{activity.description}</strong>
+                      {activity.creditsEarned && (
+                        <span className="credits-badge success">
+                          +{activity.creditsEarned} kredit
+                        </span>
+                      )}
+                      {activity.creditsPaid && (
+                        <span className="credits-badge danger">
+                          -{activity.creditsPaid} kredit
+                        </span>
+                      )}
+                    </div>
+                    <small>
+                      {new Date(activity.timestamp).toLocaleString("hu-HU")}
+                    </small>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>Még nincs tevékenység</p>
             )}
           </div>
         </div>
@@ -792,9 +935,9 @@ Módosítsd az `src/pages/CoursesPage.jsx` fájlt:
 
 ```jsx
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { courseService } from "../services/api";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../contexts/AuthContext";
 
 function CoursesPage() {
   const [courses, setCourses] = useState([]);
@@ -802,9 +945,6 @@ function CoursesPage() {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState("");
-  const [enrolling, setEnrolling] = useState(null); // ID of course being enrolled
-
-  const { refreshUser } = useAuth();
 
   useEffect(() => {
     loadCourses();
@@ -819,7 +959,8 @@ function CoursesPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setCourses(data);
+        // Az API { courses: [...] } formátumban adja vissza
+        setCourses(data.courses || data);
       } else if (response.status === 401) {
         setError("Kérlek jelentkezz be újra");
       } else {
@@ -832,39 +973,13 @@ function CoursesPage() {
     }
   };
 
-  const handleEnroll = async (courseId) => {
-    try {
-      setEnrolling(courseId);
-
-      const response = await courseService.enrollInCourse(courseId);
-
-      if (response.status === 200) {
-        alert("Sikeres beiratkozás!");
-        // Frissítsük a kurzusok listáját és a felhasználó adatait
-        await loadCourses();
-        await refreshUser();
-      } else if (response.status === 403) {
-        alert("Már beiratkoztál erre a kurzusra");
-      } else if (response.status === 422) {
-        const data = await response.json();
-        alert(data.message || "Nem elég kredit a beiratkozáshoz");
-      } else {
-        alert("Hiba történt a beiratkozás során");
-      }
-    } catch (error) {
-      alert("Hálózati hiba történt");
-    } finally {
-      setEnrolling(null);
-    }
-  };
-
   // Szűrés és keresés
-  const filteredCourses = courses.filter(course => {
-    const matchesSearch = 
+  const filteredCourses = courses.filter((course) => {
+    const matchesSearch =
       course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       course.description.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesDifficulty = 
+
+    const matchesDifficulty =
       !difficultyFilter || course.difficulty === difficultyFilter;
 
     return matchesSearch && matchesDifficulty;
@@ -885,7 +1000,11 @@ function CoursesPage() {
         <h1>Kurzuskatalógus</h1>
         <div className="error-message">
           ⚠️ {error}
-          <button onClick={loadCourses} className="btn btn-primary" style={{ marginTop: "1rem" }}>
+          <button
+            onClick={loadCourses}
+            className="btn btn-primary"
+            style={{ marginTop: "1rem" }}
+          >
             Újrapróbálás
           </button>
         </div>
@@ -926,23 +1045,21 @@ function CoursesPage() {
               <h3>{course.title}</h3>
               <p>{course.description}</p>
               <div className="course-meta">
-                <span>Nehézség: {getDifficultyLabel(course.difficulty)}</span>
-                <span>Fejezetek: {course.chapters_count}</span>
-                <span>Kreditek: {course.total_credits}</span>
+                <span>📚 {course.totalChapters} fejezet</span>
+                <span>⭐ {getDifficultyLabel(course.difficulty)}</span>
               </div>
 
-              {course.enrolled ? (
-                <Link to={`/courses/${course.id}`} className="btn btn-primary">
-                  Tanulás folytatása
+              {course.isEnrolled ? (
+                <Link
+                  to={`/courses/${course.id}`}
+                  className="btn btn-secondary"
+                >
+                  Folytatás
                 </Link>
               ) : (
-                <button
-                  onClick={() => handleEnroll(course.id)}
-                  className="btn btn-primary"
-                  disabled={enrolling === course.id}
-                >
-                  {enrolling === course.id ? "Beiratkozás..." : "Beiratkozás"}
-                </button>
+                <Link to={`/courses/${course.id}`} className="btn btn-primary">
+                  Részletek
+                </Link>
               )}
             </div>
           ))}
@@ -956,7 +1073,7 @@ function getDifficultyLabel(difficulty) {
   const labels = {
     beginner: "Kezdő",
     intermediate: "Haladó",
-    advanced: "Szakértő"
+    advanced: "Szakértő",
   };
   return labels[difficulty] || difficulty;
 }
@@ -972,16 +1089,17 @@ Módosítsd az `src/pages/CourseDetailsPage.jsx` fájlt:
 
 ```jsx
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link } from "react-router";
 import { courseService, chapterService } from "../services/api";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../contexts/AuthContext";
 
 function CourseDetailsPage() {
   const { id } = useParams();
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [completing, setCompleting] = useState(null); // ID of chapter being completed
+  const [completingChapterId, setCompletingChapterId] = useState(null);
+  const [enrolling, setEnrolling] = useState(false);
 
   const { refreshUser } = useAuth();
 
@@ -998,7 +1116,8 @@ function CourseDetailsPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setCourse(data);
+        // Az API { course: {...} } formátumban adja vissza
+        setCourse(data.course || data);
       } else if (response.status === 404) {
         setError("A kurzus nem található");
       } else if (response.status === 401) {
@@ -1013,16 +1132,40 @@ function CourseDetailsPage() {
     }
   };
 
-  const handleCompleteChapter = async (chapterId) => {
-    try {
-      setCompleting(chapterId);
+  const handleEnroll = async () => {
+    setEnrolling(true);
+    setError("");
 
-      const response = await chapterService.completeChapter(chapterId);
+    try {
+      const response = await courseService.enrollInCourse(id);
+
+      if (response.ok) {
+        alert("Sikeres beiratkozás!");
+        await loadCourseDetails();
+        await refreshUser();
+      } else if (response.status === 409) {
+        setError("Már beiratkoztál erre a kurzusra");
+      } else {
+        setError("Nem sikerült beiratkozni a kurzusra");
+      }
+    } catch (error) {
+      console.error("Error enrolling:", error);
+      setError("Hálózati hiba történt");
+    } finally {
+      setEnrolling(false);
+    }
+  };
+
+  const handleCompleteChapter = async (chapterId) => {
+    setCompletingChapterId(chapterId);
+
+    try {
+      const response = await chapterService.completeChapter(id, chapterId);
 
       if (response.status === 200) {
         const data = await response.json();
-        alert(`Gratulálunk! +${data.credits_earned} kredit!`);
-        
+        alert(`Gratulálunk! +${data.creditsEarned} kredit!`);
+
         // Frissítsük a kurzus adatokat és a felhasználó adatait
         await loadCourseDetails();
         await refreshUser();
@@ -1039,7 +1182,7 @@ function CourseDetailsPage() {
     } catch (error) {
       alert("Hálózati hiba történt");
     } finally {
-      setCompleting(null);
+      setCompletingChapterId(null);
     }
   };
 
@@ -1047,11 +1190,11 @@ function CourseDetailsPage() {
     // LinkedIn share widget inicializálása
     // Ez a widget a public/third-party mappából lesz betöltve
     if (window.LinkedInShare) {
-      const chapter = course.chapters.find(ch => ch.id === chapterId);
+      const chapter = course.chapters.find((ch) => ch.id === chapterId);
       window.LinkedInShare.init({
         elementId: `linkedin-share-${chapterId}`,
         text: `Befejeztem a "${chapter.title}" fejezetet a SkillShare Academy-n!`,
-        url: window.location.href
+        url: window.location.href,
       });
     }
   };
@@ -1067,9 +1210,7 @@ function CourseDetailsPage() {
   if (error) {
     return (
       <div className="page course-details-page">
-        <div className="error-message">
-          ⚠️ {error}
-        </div>
+        <div className="error-message">⚠️ {error}</div>
         <Link to="/courses" className="btn btn-primary">
           Vissza a kurzusokhoz
         </Link>
@@ -1085,11 +1226,13 @@ function CourseDetailsPage() {
     );
   }
 
-  const completedCount = course.chapters?.filter(ch => ch.completed).length || 0;
+  const completedCount =
+    course.chapters?.filter((ch) => ch.isCompleted).length || 0;
   const totalCount = course.chapters?.length || 0;
-  const completedCredits = course.chapters
-    ?.filter(ch => ch.completed)
-    .reduce((sum, ch) => sum + ch.credits, 0) || 0;
+  const completedCredits =
+    course.chapters
+      ?.filter((ch) => ch.isCompleted)
+      .reduce((sum, ch) => sum + ch.credits, 0) || 0;
 
   return (
     <div className="page course-details-page">
@@ -1100,72 +1243,89 @@ function CourseDetailsPage() {
         </Link>
         <h1>{course.title}</h1>
         <p>{course.description}</p>
-        <div className="progress-info">
-          <p>
-            Előrehaladás: {completedCount}/{totalCount} fejezet
-          </p>
-          <p>
-            Kreditek: {completedCredits}/{course.total_credits}
-          </p>
-        </div>
-        <div className="progress-bar">
-          <div
-            className="progress-bar-fill"
-            style={{ width: `${(completedCount / totalCount) * 100}%` }}
-          ></div>
-        </div>
+
+        {error && <div className="error-message">⚠️ {error}</div>}
+
+        {!course.isEnrolled && (
+          <button
+            onClick={handleEnroll}
+            disabled={enrolling}
+            className="btn btn-primary"
+          >
+            {enrolling ? "Beiratkozás..." : "Beiratkozás"}
+          </button>
+        )}
+
+        {course.isEnrolled && (
+          <>
+            <div className="progress-info">
+              <p>
+                Előrehaladás: {completedCount}/{totalCount} fejezet
+              </p>
+              <p>
+                Kreditek: {completedCredits}/{course.totalCredits || 0}
+              </p>
+            </div>
+            <div className="progress-bar">
+              <div
+                className="progress-bar-fill"
+                style={{
+                  width: `${
+                    totalCount > 0 ? (completedCount / totalCount) * 100 : 0
+                  }%`,
+                }}
+              ></div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Fejezetek listája */}
-      <div className="chapters-list">
-        <h2>Fejezetek</h2>
-        {course.chapters && course.chapters.length > 0 ? (
-          course.chapters.map((chapter, index) => (
-            <div
-              key={chapter.id}
-              className={`chapter-item ${chapter.completed ? "completed" : ""}`}
-            >
-              <div className="chapter-header">
-                <h3>
-                  {index + 1}. fejezet - {chapter.title}
-                </h3>
-                {chapter.completed && (
-                  <span className="completed-badge">✓ Befejezve</span>
-                )}
+      {course.isEnrolled && (
+        <div className="chapters-section">
+          <h2>Fejezetek</h2>
+          <div className="chapters-list">
+            {course.chapters.map((chapter) => (
+              <div
+                key={chapter.id}
+                className={`chapter-item ${
+                  chapter.isCompleted ? "completed" : ""
+                }`}
+              >
+                <div className="chapter-info">
+                  <h3>
+                    {chapter.isCompleted && "✓ "}
+                    {chapter.title}
+                  </h3>
+                  <p>Jutalom: {chapter.credits} kredit</p>
+                </div>
+                <div className="chapter-actions">
+                  {!chapter.isCompleted && (
+                    <button
+                      onClick={() => handleCompleteChapter(chapter.id)}
+                      disabled={completingChapterId === chapter.id}
+                      className="btn btn-primary"
+                    >
+                      {completingChapterId === chapter.id
+                        ? "Befejezés..."
+                        : "Befejezés"}
+                    </button>
+                  )}
+                  {chapter.isCompleted && (
+                    <div
+                      id={`linkedin-share-${chapter.id}`}
+                      className="linkedin-share-container"
+                    >
+                      {/* LinkedIn Share Widget betöltődik ide */}
+                      <span className="completed-badge">✅ Befejezve</span>
+                    </div>
+                  )}
+                </div>
               </div>
-              <p>{chapter.description}</p>
-              <p className="chapter-credits">Kredit: {chapter.credits}</p>
-
-              <div className="chapter-actions">
-                <button className="btn btn-secondary" disabled>
-                  Fejezet megtekintése (később)
-                </button>
-
-                {chapter.completed ? (
-                  <div
-                    id={`linkedin-share-${chapter.id}`}
-                    className="linkedin-share-container"
-                  >
-                    {/* LinkedIn share widget jelenik meg ide */}
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => handleCompleteChapter(chapter.id)}
-                    className="btn btn-primary"
-                    disabled={completing === chapter.id}
-                  >
-                    {completing === chapter.id
-                      ? "Befejezés..."
-                      : "Befejezettnek jelölés"}
-                  </button>
-                )}
-              </div>
-            </div>
-          ))
-        ) : (
-          <p>Ennek a kurzusnak még nincsenek fejezetei.</p>
-        )}
-      </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1302,92 +1462,81 @@ export function usePolling(callback, interval = 30000) {
 Módosítsd az `src/pages/MentorsPage.jsx` fájlt:
 
 ```jsx
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "../contexts/AuthContext";
 import { mentorService } from "../services/api";
 import { usePolling } from "../hooks/usePolling";
-import { useAuth } from "../hooks/useAuth";
 
 function MentorsPage() {
-  const [availableSessions, setAvailableSessions] = useState([]);
-  const [bookedSessions, setBookedSessions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [booking, setBooking] = useState(null); // ID of session being booked
-  const [lastUpdate, setLastUpdate] = useState(null);
-
   const { refreshUser } = useAuth();
-
-  // Foglalások lekérése
-  const loadBookings = useCallback(async () => {
-    try {
-      const response = await mentorService.getBookedSessions();
-      if (response.ok) {
-        const data = await response.json();
-        setBookedSessions(data);
-        setLastUpdate(new Date());
-      }
-    } catch (error) {
-      console.error("Error loading bookings:", error);
-    }
-  }, []);
-
-  // 30 másodpercenként frissítjük a foglalásokat
-  usePolling(loadBookings, 30000);
-
-  // Elérhető időpontok betöltése
-  useEffect(() => {
-    loadAvailableSessions();
-  }, []);
+  const [availableSessions, setAvailableSessions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [bookingId, setBookingId] = useState(null);
+  const [lastUpdate, setLastUpdate] = useState(new Date());
 
   const loadAvailableSessions = async () => {
     try {
-      setLoading(true);
-      setError(null);
-
       const response = await mentorService.getAvailableSessions();
 
       if (response.ok) {
         const data = await response.json();
-        setAvailableSessions(data);
-      } else if (response.status === 401) {
-        setError("Kérlek jelentkezz be újra");
+        // Az API { sessions: [...] } formátumban adja vissza
+        setAvailableSessions(data.sessions || data);
+        setLastUpdate(new Date());
+        setError("");
       } else {
         setError("Nem sikerült betölteni az elérhető időpontokat");
       }
-    } catch (err) {
+    } catch (error) {
+      console.error("Error loading available sessions:", error);
       setError("Hálózati hiba történt");
-    } finally {
-      setLoading(false);
     }
   };
 
-  const handleBookSession = async (sessionId) => {
-    try {
-      setBooking(sessionId);
+  const loadAllData = async () => {
+    setLoading(true);
+    setError("");
 
+    await loadAvailableSessions();
+
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadAllData();
+  }, []);
+
+  // Polling - frissítés 30 másodpercenként
+  usePolling(() => {
+    loadAvailableSessions();
+  }, 30000);
+
+  const handleBookSession = async (sessionId) => {
+    setBookingId(sessionId);
+    setError("");
+
+    try {
       const response = await mentorService.bookSession(sessionId);
 
-      if (response.status === 200) {
-        alert("Sikeres foglalás! A foglalás megerősítésre vár.");
-        // Frissítsük az adatokat
-        await loadAvailableSessions();
-        await loadBookings();
+      if (response.ok) {
+        const data = await response.json();
+        alert(data.message || "Sikeres foglalás!");
+        // Frissítsd az adatokat és a felhasználó adatait
+        await loadAllData();
         await refreshUser();
       } else if (response.status === 403) {
-        alert("Már foglaltál erre az időpontra");
-      } else if (response.status === 422) {
-        const data = await response.json();
-        alert(data.message || "Nem elég kredit a foglaláshoz");
-      } else if (response.status === 404) {
-        alert("Ez az időpont már nem elérhető");
-        await loadAvailableSessions();
+        alert("Nem elég kredit a foglaláshoz");
+      } else if (response.status === 409) {
+        alert("Ez az időpont már foglalt");
       } else {
-        alert("Hiba történt a foglalás során");
+        alert("Nem sikerült lefoglalni az időpontot");
       }
     } catch (error) {
+      console.error("Error booking session:", error);
       alert("Hálózati hiba történt");
     } finally {
-      setBooking(null);
+      setBookingId(null);
     }
   };
 
@@ -1395,7 +1544,7 @@ function MentorsPage() {
     return (
       <div className="page mentors-page">
         <h1>Mentor foglalás</h1>
-        <p>Betöltés...</p>
+        <div className="loading-spinner">Betöltés...</div>
       </div>
     );
   }
@@ -1404,9 +1553,7 @@ function MentorsPage() {
     return (
       <div className="page mentors-page">
         <h1>Mentor foglalás</h1>
-        <div className="error-message">
-          ⚠️ {error}
-        </div>
+        <div className="error-message">⚠️ {error}</div>
       </div>
     );
   }
@@ -1414,98 +1561,79 @@ function MentorsPage() {
   return (
     <div className="page mentors-page">
       <h1>Mentor foglalás</h1>
+      <p className="last-update">
+        Utolsó frissítés: {lastUpdate.toLocaleTimeString()}
+        <br />
+        <small>(Automatikus frissítés 30 másodpercenként)</small>
+      </p>
 
-      {/* Polling indikátor */}
-      <div className="polling-indicator">
-        <span className="status-badge">
-          🔄 Automatikus frissítés aktív (30 mp)
-        </span>
-        {lastUpdate && (
-          <span className="last-update">
-            Utolsó frissítés: {lastUpdate.toLocaleTimeString()}
-          </span>
-        )}
-      </div>
-
-      {/* Elérhető időpontok */}
-      <div className="mentors-section">
+      <section className="available-sessions">
         <h2>Elérhető időpontok</h2>
         {availableSessions.length === 0 ? (
-          <p>Jelenleg nincs elérhető időpont</p>
+          <p>Jelenleg nincs elérhető időpont.</p>
         ) : (
-          availableSessions.map((session) => (
-            <div key={session.id} className="session-card">
-              <div className="session-info">
-                <h3>{session.mentor_name}</h3>
-                <p><strong>Időpont:</strong> {formatDateTime(session.session_time)}</p>
-                <p><strong>Időtartam:</strong> {session.duration_minutes} perc</p>
-                <p><strong>Költség:</strong> {session.cost_credits} kredit</p>
-                <p><strong>Szakterület:</strong> {session.expertise}</p>
+          <div className="sessions-grid">
+            {availableSessions.map((session) => (
+              <div key={session.id} className="session-card">
+                <div className="session-info">
+                  <h3>{session.mentorName}</h3>
+                  <p>
+                    <strong>Időpont:</strong>{" "}
+                    {formatDateTime(session.sessionDate)}
+                  </p>
+                  <p>
+                    <strong>Időtartam:</strong> {session.durationMinutes} perc
+                  </p>
+                  <p>
+                    <strong>Költség:</strong> {session.creditCost} kredit
+                  </p>
+                  <p>
+                    <strong>Szakterület:</strong> {session.expertise}
+                  </p>
+                  <p>
+                    <strong>Szint:</strong>{" "}
+                    {getExperienceLabel(session.experienceLevel)}
+                  </p>
+                </div>
+                <div className="session-actions">
+                  <button
+                    onClick={() => handleBookSession(session.id)}
+                    disabled={bookingId === session.id || !session.isAvailable}
+                    className="btn btn-primary"
+                  >
+                    {bookingId === session.id
+                      ? "Foglalás..."
+                      : !session.isAvailable
+                      ? "Nem elérhető"
+                      : "Foglalás"}
+                  </button>
+                </div>
               </div>
-              <div className="session-actions">
-                <button className="btn btn-secondary" disabled>
-                  Profil megtekintése (később)
-                </button>
-                <button
-                  onClick={() => handleBookSession(session.id)}
-                  className="btn btn-primary"
-                  disabled={booking === session.id}
-                >
-                  {booking === session.id ? "Foglalás..." : "Foglalás"}
-                </button>
-              </div>
-            </div>
-          ))
+            ))}
+          </div>
         )}
-      </div>
-
-      {/* Foglalt időpontok */}
-      <div className="booked-sessions">
-        <h2>Foglalt időpontjaim</h2>
-        {bookedSessions.length === 0 ? (
-          <p>Még nincs foglalt időpontod.</p>
-        ) : (
-          bookedSessions.map((booking) => (
-            <div key={booking.id} className={`session-card booking-${booking.status}`}>
-              <div className="session-info">
-                <h3>{booking.mentor_name}</h3>
-                <p><strong>Időpont:</strong> {formatDateTime(booking.session_time)}</p>
-                <p><strong>Időtartam:</strong> {booking.duration_minutes} perc</p>
-                <p><strong>Költség:</strong> {booking.cost_credits} kredit</p>
-                <p>
-                  <strong>Státusz:</strong>{" "}
-                  <span className={`status-label status-${booking.status}`}>
-                    {getStatusLabel(booking.status)}
-                  </span>
-                </p>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+      </section>
     </div>
   );
 }
 
-function formatDateTime(dateTimeString) {
-  const date = new Date(dateTimeString);
-  return date.toLocaleString("hu-HU", {
+function formatDateTime(dateString) {
+  return new Date(dateString).toLocaleString("hu-HU", {
     year: "numeric",
     month: "long",
     day: "numeric",
     hour: "2-digit",
-    minute: "2-digit"
+    minute: "2-digit",
   });
 }
 
-function getStatusLabel(status) {
+function getExperienceLabel(level) {
   const labels = {
-    pending: "Függőben",
-    confirmed: "Megerősítve",
-    rejected: "Elutasítva",
-    completed: "Befejezve"
+    junior: "Junior",
+    mid: "Mid-level",
+    senior: "Senior",
   };
-  return labels[status] || status;
+  return labels[level] || level;
 }
 
 export default MentorsPage;
@@ -1626,7 +1754,7 @@ Győződj meg róla, hogy a következő fájlok a `public/third-party` mappában
 Módosítsd a `public/index.html` fájlt (vagy add hozzá a szkriptet dinamikusan):
 
 ```html
-<!doctype html>
+<!DOCTYPE html>
 <html lang="hu">
   <head>
     <meta charset="UTF-8" />
@@ -1651,7 +1779,7 @@ A widget automatikusan inicializálódik a `CourseDetailsPage` komponensben, ami
 Végül frissítsük az `App.jsx`-et, hogy az AuthProvider-t használja:
 
 ```jsx
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router";
 import { AuthProvider } from "./contexts/AuthContext";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -1835,6 +1963,16 @@ Ebben a modulban elkészítetted:
 ✅ **Hibakezelés** - minden HTTP státuszkód kezelése  
 ✅ **Loading állapotok** - felhasználóbarát visszajelzések
 
+> [!NOTE] > **Főbb változások a Module 2-höz képest:**
+>
+> - ❌ **Töröltük:** `src/services/authService.js` (mock service)
+> - ✅ **Hozzáadtuk:** `src/services/api.js` (valódi API service)
+> - 🔄 **Frissítettük:** AuthContext - most az `api.js` authService-ét használja
+> - ✅ **Megtartottuk:** Az AuthContext továbbra is NEM használ `useNavigate`-et
+> - ✅ **Megtartottuk:** A komponensek továbbra is kezelik a navigációt
+> - ✅ **Hozzáadtuk:** `refreshUser()` funkció a user adatok frissítéséhez
+> - ✅ **Hozzáadtuk:** Chart.js, LinkedIn Widget, Polling, stb.
+
 ### Gratulálunk! 🎉
 
 Elkészítetted a teljes SkillShare Academy alkalmazást! Az alkalmazás:
@@ -1851,38 +1989,45 @@ Elkészítetted a teljes SkillShare Academy alkalmazást! Az alkalmazás:
 Ha szeretnéd tovább fejleszteni az alkalmazást:
 
 1. **Fejlett keresés**
+
    - Teljes szöveges keresés
    - Több szűrési opció
    - Rendezési lehetőségek
 
 2. **Profil oldal**
+
    - Felhasználói adatok szerkesztése
    - Jelszó változtatás
    - Profilkép feltöltés
 
 3. **Értesítések**
+
    - Toast notification rendszer
    - Email értesítések (backend)
    - Push notifikációk
 
 4. **Teljesítmény optimalizálás**
+
    - React.memo használata
    - useMemo és useCallback optimalizálás
    - Lazy loading komponensekhez
    - Infinite scroll a kurzuslistához
 
 5. **Tesztelés**
+
    - Unit tesztek (Jest, Vitest)
    - Integration tesztek
    - E2E tesztek (Playwright, Cypress)
 
 6. **Deployment**
+
    - Build optimalizálás
    - Environment változók
    - CI/CD pipeline
    - Hosting (Vercel, Netlify, stb.)
 
 7. **Accessibility (A11y)**
+
    - ARIA attribútumok
    - Keyboard navigation
    - Screen reader support
@@ -1903,6 +2048,7 @@ Ha szeretnéd tovább fejleszteni az alkalmazást:
 **Probléma:** `Failed to fetch` vagy `Network error`
 
 **Megoldás:**
+
 ```bash
 cd assets/backend-solution
 docker compose up -d
@@ -1920,6 +2066,7 @@ curl http://localhost:5000/api/v1/health
 **Probléma:** A chartok nem jelennek meg
 
 **Megoldás:**
+
 1. Ellenőrizd, hogy telepítetted: `npm install chart.js react-chartjs-2`
 2. Ellenőrizd, hogy regisztráltad a szükséges komponenseket
 3. Nézd meg a böngésző konzolt hibákért
@@ -1929,6 +2076,7 @@ curl http://localhost:5000/api/v1/health
 **Probléma:** A mentor foglalások nem frissülnek automatikusan
 
 **Megoldás:**
+
 1. Ellenőrizd a `usePolling` hook-ot
 2. Nézd meg a Network fület - 30 másodpercenként látszódnia kell egy API hívásnak
 3. Ellenőrizd, hogy a komponens nem unmountolódik
@@ -1938,6 +2086,7 @@ curl http://localhost:5000/api/v1/health
 **Probléma:** A share gomb nem látszik
 
 **Megoldás:**
+
 1. Ellenőrizd, hogy a fájlok a `public/third-party/` mappában vannak
 2. Ellenőrizd, hogy betöltődnek a böngésző Network fülén
 3. Nézd meg, hogy `window.LinkedInShare` elérhető-e a konzolból
@@ -1947,6 +2096,7 @@ curl http://localhost:5000/api/v1/health
 **Probléma:** Kijelentkezik minden frissítésnél
 
 **Megoldás:**
+
 1. Ellenőrizd a böngésző Developer Tools → Application → Local Storage
 2. Nézd meg, hogy a `token` kulcs ott van-e
 3. Ellenőrizd, hogy a login/register helyesen menti a tokent
@@ -1964,4 +2114,3 @@ Hasonlítsd össze az elkészült alkalmazást a wireframe-ekkel:
 7. **07-booked-sessions.png** ✅ Foglalt időpontok
 
 Minden funkcionalitás implementálva! 🚀
-
