@@ -40,6 +40,14 @@ function CourseDetailsPage() {
     loadCourseDetails();
   }, [id]);
 
+  useEffect(() => {
+    LinkedInShare.init({
+      container: "#linkedin-share-root",
+      theme: "light",
+      locale: "en-US",
+    });
+  }, []);
+
   const handleEnroll = async () => {
     setEnrolling(true);
     setError("");
@@ -77,9 +85,6 @@ function CourseDetailsPage() {
         // Frissítsük a kurzus adatokat és a felhasználó adatait
         await loadCourseDetails();
         await refreshUser();
-
-        // LinkedIn share widget betöltése
-        loadLinkedInShareWidget(chapterId);
       } else if (response.status === 403) {
         alert("Ezt a fejezetet már befejezted");
       } else {
@@ -93,16 +98,14 @@ function CourseDetailsPage() {
     }
   };
 
-  const loadLinkedInShareWidget = (chapterId) => {
-    // Ez a widget a public/third-party mappából lesz betöltve
-    if (window.LinkedInShare) {
-      const chapter = course.chapters.find((ch) => ch.id === chapterId);
-      window.LinkedInShare.init({
-        elementId: `linkedin-share-${chapterId}`,
-        text: `Befejeztem a "${chapter.title}" fejezetet a SkillShare Academy-n!`,
-        url: window.location.href,
-      });
-    }
+  const share = (chapter) => {
+    LinkedInShare.open({
+      url: `/courses/${course.id}`,
+      title: course.title,
+      summary: `I just completed ${chapter.title}!`,
+      source: "SkillShare Academy",
+      tags: ["learning", "skills"],
+    });
   };
 
   if (loading) {
@@ -210,7 +213,12 @@ function CourseDetailsPage() {
                       id={`linkedin-share-${chapter.id}`}
                       className="linkedin-share-container"
                     >
-                      {/* LinkedIn Share Widget betöltődik ide */}
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => share(chapter)}
+                      >
+                        Megosztás LinkedInen
+                      </button>
                       <span className="completed-badge">✅ Befejezve</span>
                     </div>
                   )}
@@ -220,6 +228,7 @@ function CourseDetailsPage() {
           </div>
         </div>
       )}
+      <div id="linkedin-share-root"></div>
     </div>
   );
 }
