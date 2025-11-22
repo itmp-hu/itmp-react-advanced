@@ -110,7 +110,6 @@ export function AuthProvider({ children }) {
     token,
     loading,
     login,
-    register,
     logout,
     refreshUser,
     isAuthenticated: !!token,

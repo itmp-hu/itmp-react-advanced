@@ -150,37 +150,8 @@ function DashboardPage() {
               </div>
             )}
           </div>
-
           {/* Legutóbbi tevékenység */}
-          <div className="recent-activity">
-            <h3>Legutóbbi tevékenység</h3>
-            {recentActivity && recentActivity.length > 0 ? (
-              <ul className="activity-list">
-                {recentActivity.slice(0, 5).map((activity, index) => (
-                  <li key={index} className="activity-item">
-                    <div>
-                      <strong>{activity.description}</strong>
-                      {activity.creditsEarned && (
-                        <span className="credits-badge success">
-                          +{activity.creditsEarned} kredit
-                        </span>
-                      )}
-                      {activity.creditsPaid && (
-                        <span className="credits-badge danger">
-                          -{activity.creditsPaid} kredit
-                        </span>
-                      )}
-                    </div>
-                    <small>
-                      {new Date(activity.timestamp).toLocaleString("hu-HU")}
-                    </small>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>Még nincs tevékenység</p>
-            )}
-          </div>
+          {/* TODO: Implement recent activity section */}
         </div>
       </div>
     </div>
