@@ -233,7 +233,7 @@ export function AuthProvider({ children }) {
 
           if (response.ok) {
             const userData = await response.json();
-            setUser(userData);
+            setUser(userData.user);
           } else {
             // Token érvénytelen, töröljük
             localStorage.removeItem("token");
@@ -332,7 +332,7 @@ export function AuthProvider({ children }) {
       const response = await userService.getCurrentUser();
       if (response.ok) {
         const userData = await response.json();
-        setUser(userData);
+        setUser(userData.user);
       }
     } catch (error) {
       console.error("Error refreshing user:", error);
@@ -523,7 +523,7 @@ function LoginPage() {
           <p style={{ fontSize: "0.875rem", color: "#0369a1" }}>
             <strong>Teszt bejelentkezés:</strong>
             <br />
-            Email: alice.smith@example.com
+            Email: alice@example.com
             <br />
             Jelszó: password123
           </p>
@@ -936,40 +936,65 @@ Módosítsd az `src/pages/CoursesPage.jsx` fájlt:
 ```jsx
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
-import { courseService } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
+import { courseService } from "../services/api";
 
 function CoursesPage() {
+  const { user } = useAuth();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState("");
+  const [enrollError, setEnrollError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState("");
+  const [enrollingCourseId, setEnrollingCourseId] = useState(null);
 
-  useEffect(() => {
-    loadCourses();
-  }, []);
-
+  // Kurzusok betöltése
   const loadCourses = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+    setError("");
 
+    try {
       const response = await courseService.getAllCourses();
 
       if (response.ok) {
         const data = await response.json();
         // Az API { courses: [...] } formátumban adja vissza
         setCourses(data.courses || data);
-      } else if (response.status === 401) {
-        setError("Kérlek jelentkezz be újra");
       } else {
         setError("Nem sikerült betölteni a kurzusokat");
       }
-    } catch (err) {
+    } catch (error) {
+      console.error("Error loading courses:", error);
       setError("Hálózati hiba történt");
     } finally {
       setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCourses();
+  }, []);
+
+  const handleEnroll = async (courseId) => {
+    setEnrollError("");
+    setEnrollingCourseId(courseId);
+
+    try {
+      const response = await courseService.enrollInCourse(courseId);
+
+      if (response.ok) {
+        // refresh list
+        await loadCourses();
+      } else if (response.status === 403) {
+        setEnrollError("Már beiratkoztál erre a kurzusra");
+      } else {
+        setEnrollError("Nem sikerült beiratkozni a kurzusra");
+      }
+    } catch (err) {
+      console.error("Error enrolling:", err);
+      setEnrollError("Hálózati hiba történt");
+    } finally {
+      setEnrollingCourseId(null);
     }
   };
 
@@ -988,8 +1013,8 @@ function CoursesPage() {
   if (loading) {
     return (
       <div className="page courses-page">
-        <h1>Kurzuskatalógus</h1>
-        <p>Betöltés...</p>
+        <h1>Kurzusok</h1>
+        <div className="loading-spinner">Betöltés...</div>
       </div>
     );
   }
@@ -997,7 +1022,7 @@ function CoursesPage() {
   if (error) {
     return (
       <div className="page courses-page">
-        <h1>Kurzuskatalógus</h1>
+        <h1>Kurzusok</h1>
         <div className="error-message">
           ⚠️ {error}
           <button
@@ -1014,13 +1039,16 @@ function CoursesPage() {
 
   return (
     <div className="page courses-page">
-      <h1>Kurzuskatalógus</h1>
+      <h1>Kurzusok</h1>
 
-      {/* Keresés és szűrés */}
+      <p style={{ marginBottom: "2rem", color: "var(--secondary-color)" }}>
+        Helló {user?.name}! Itt láthatod az elérhető kurzusokat.
+      </p>
+
       <div className="courses-filters">
         <input
           type="text"
-          placeholder="Keresés kurzusok között..."
+          placeholder="Keresés..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
@@ -1028,16 +1056,19 @@ function CoursesPage() {
           value={difficultyFilter}
           onChange={(e) => setDifficultyFilter(e.target.value)}
         >
-          <option value="">Minden nehézségi szint</option>
+          <option value="">Minden nehézség</option>
           <option value="beginner">Kezdő</option>
           <option value="intermediate">Haladó</option>
           <option value="advanced">Szakértő</option>
         </select>
       </div>
 
-      {/* Kurzusok listája */}
+      {enrollError && <div className="error-message">⚠️ {enrollError}</div>}
+
       {filteredCourses.length === 0 ? (
-        <p>Nincs találat</p>
+        <div className="no-results">
+          <p>Nincs találat a keresési feltételeknek megfelelően.</p>
+        </div>
       ) : (
         <div className="courses-grid">
           {filteredCourses.map((course) => (
@@ -1048,7 +1079,6 @@ function CoursesPage() {
                 <span>📚 {course.totalChapters} fejezet</span>
                 <span>⭐ {getDifficultyLabel(course.difficulty)}</span>
               </div>
-
               {course.isEnrolled ? (
                 <Link
                   to={`/courses/${course.id}`}
@@ -1057,9 +1087,15 @@ function CoursesPage() {
                   Folytatás
                 </Link>
               ) : (
-                <Link to={`/courses/${course.id}`} className="btn btn-primary">
-                  Részletek
-                </Link>
+                <button
+                  onClick={() => handleEnroll(course.id)}
+                  disabled={enrollingCourseId === course.id}
+                  className="btn btn-primary"
+                >
+                  {enrollingCourseId === course.id
+                    ? "Beiratkozás..."
+                    : "Beiratkozás"}
+                </button>
               )}
             </div>
           ))}
@@ -1090,28 +1126,22 @@ Módosítsd az `src/pages/CourseDetailsPage.jsx` fájlt:
 ```jsx
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router";
-import { courseService, chapterService } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
+import { courseService, chapterService } from "../services/api";
 
 function CourseDetailsPage() {
   const { id } = useParams();
+  const { user, refreshUser } = useAuth();
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState("");
   const [completingChapterId, setCompletingChapterId] = useState(null);
-  const [enrolling, setEnrolling] = useState(false);
-
-  const { refreshUser } = useAuth();
-
-  useEffect(() => {
-    loadCourseDetails();
-  }, [id]);
 
   const loadCourseDetails = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+    setLoading(true);
+    setError("");
 
+    try {
       const response = await courseService.getCourseById(id);
 
       if (response.ok) {
@@ -1120,41 +1150,28 @@ function CourseDetailsPage() {
         setCourse(data.course || data);
       } else if (response.status === 404) {
         setError("A kurzus nem található");
-      } else if (response.status === 401) {
-        setError("Kérlek jelentkezz be újra");
       } else {
         setError("Nem sikerült betölteni a kurzus adatait");
       }
-    } catch (err) {
+    } catch (error) {
+      console.error("Error loading course:", error);
       setError("Hálózati hiba történt");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEnroll = async () => {
-    setEnrolling(true);
-    setError("");
+  useEffect(() => {
+    loadCourseDetails();
+  }, [id]);
 
-    try {
-      const response = await courseService.enrollInCourse(id);
-
-      if (response.ok) {
-        alert("Sikeres beiratkozás!");
-        await loadCourseDetails();
-        await refreshUser();
-      } else if (response.status === 409) {
-        setError("Már beiratkoztál erre a kurzusra");
-      } else {
-        setError("Nem sikerült beiratkozni a kurzusra");
-      }
-    } catch (error) {
-      console.error("Error enrolling:", error);
-      setError("Hálózati hiba történt");
-    } finally {
-      setEnrolling(false);
-    }
-  };
+  useEffect(() => {
+    LinkedInShare.init({
+      container: "#linkedin-share-root",
+      theme: "light",
+      locale: "en-US",
+    });
+  }, []);
 
   const handleCompleteChapter = async (chapterId) => {
     setCompletingChapterId(chapterId);
@@ -1162,66 +1179,51 @@ function CourseDetailsPage() {
     try {
       const response = await chapterService.completeChapter(id, chapterId);
 
-      if (response.status === 200) {
+      if (response.ok) {
         const data = await response.json();
         alert(`Gratulálunk! +${data.creditsEarned} kredit!`);
 
         // Frissítsük a kurzus adatokat és a felhasználó adatait
         await loadCourseDetails();
         await refreshUser();
-
-        // LinkedIn share widget inicializálása
-        initLinkedInShare(chapterId);
       } else if (response.status === 403) {
-        alert("Ez a fejezet már be van fejezve");
-      } else if (response.status === 404) {
-        alert("A fejezet nem található");
+        alert("Ezt a fejezetet már befejezted");
       } else {
-        alert("Hiba történt a fejezet befejezése során");
+        alert("Nem sikerült befejezni a fejezetet");
       }
     } catch (error) {
+      console.error("Error completing chapter:", error);
       alert("Hálózati hiba történt");
     } finally {
       setCompletingChapterId(null);
     }
   };
 
-  const initLinkedInShare = (chapterId) => {
-    // LinkedIn share widget inicializálása
-    // Ez a widget a public/third-party mappából lesz betöltve
-    if (window.LinkedInShare) {
-      const chapter = course.chapters.find((ch) => ch.id === chapterId);
-      window.LinkedInShare.init({
-        elementId: `linkedin-share-${chapterId}`,
-        text: `Befejeztem a "${chapter.title}" fejezetet a SkillShare Academy-n!`,
-        url: window.location.href,
-      });
-    }
+  const share = (chapter) => {
+    LinkedInShare.open({
+      url: `/courses/${course.id}`,
+      title: course.title,
+      summary: `I just completed ${chapter.title}!`,
+      source: "SkillShare Academy",
+      tags: ["learning", "skills"],
+    });
   };
 
   if (loading) {
     return (
       <div className="page course-details-page">
-        <p>Betöltés...</p>
+        <div className="loading-spinner">Betöltés...</div>
       </div>
     );
   }
 
-  if (error) {
+  if (error && !course) {
     return (
       <div className="page course-details-page">
         <div className="error-message">⚠️ {error}</div>
         <Link to="/courses" className="btn btn-primary">
           Vissza a kurzusokhoz
         </Link>
-      </div>
-    );
-  }
-
-  if (!course) {
-    return (
-      <div className="page course-details-page">
-        <p>Nincs adat</p>
       </div>
     );
   }
@@ -1236,39 +1238,22 @@ function CourseDetailsPage() {
 
   return (
     <div className="page course-details-page">
-      {/* Kurzus fejléc */}
       <div className="course-header">
         <Link to="/courses" className="back-link">
           ← Vissza a kurzusokhoz
         </Link>
+
         <h1>{course.title}</h1>
-        <p>{course.description}</p>
+        <p className="course-description">{course.description}</p>
 
         {error && <div className="error-message">⚠️ {error}</div>}
 
-        {!course.isEnrolled && (
-          <button
-            onClick={handleEnroll}
-            disabled={enrolling}
-            className="btn btn-primary"
-          >
-            {enrolling ? "Beiratkozás..." : "Beiratkozás"}
-          </button>
-        )}
-
         {course.isEnrolled && (
-          <>
-            <div className="progress-info">
-              <p>
-                Előrehaladás: {completedCount}/{totalCount} fejezet
-              </p>
-              <p>
-                Kreditek: {completedCredits}/{course.totalCredits || 0}
-              </p>
-            </div>
+          <div className="progress-section">
+            <h3>Előrehaladás</h3>
             <div className="progress-bar">
               <div
-                className="progress-bar-fill"
+                className="progress-fill"
                 style={{
                   width: `${
                     totalCount > 0 ? (completedCount / totalCount) * 100 : 0
@@ -1276,11 +1261,14 @@ function CourseDetailsPage() {
                 }}
               ></div>
             </div>
-          </>
+            <p>
+              {completedCount} / {totalCount} fejezet befejezve
+            </p>
+            <p>Összegyűjtött kreditek: {completedCredits}</p>
+          </div>
         )}
       </div>
 
-      {/* Fejezetek listája */}
       {course.isEnrolled && (
         <div className="chapters-section">
           <h2>Fejezetek</h2>
@@ -1316,7 +1304,12 @@ function CourseDetailsPage() {
                       id={`linkedin-share-${chapter.id}`}
                       className="linkedin-share-container"
                     >
-                      {/* LinkedIn Share Widget betöltődik ide */}
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => share(chapter)}
+                      >
+                        Megosztás LinkedInen
+                      </button>
                       <span className="completed-badge">✅ Befejezve</span>
                     </div>
                   )}
@@ -1326,6 +1319,7 @@ function CourseDetailsPage() {
           </div>
         </div>
       )}
+      <div id="linkedin-share-root"></div>
     </div>
   );
 }
