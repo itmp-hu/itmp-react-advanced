@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { mentorService } from "../services/api";
+import { mentorService, userService } from "../services/api";
 import { usePolling } from "../hooks/usePolling";
 
 function MentorsPage() {
   const { refreshUser } = useAuth();
   const [availableSessions, setAvailableSessions] = useState([]);
+  const [bookedSessions, setBookedSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [bookingId, setBookingId] = useState(null);
@@ -34,18 +35,41 @@ function MentorsPage() {
     setLoading(true);
     setError("");
 
-    await loadAvailableSessions();
-
+    try {
+      await Promise.all([loadAvailableSessions(), loadBookedSessions()]);
+    } catch (err) {
+      console.error("Error loading all data:", err);
+    }
     setLoading(false);
+  };
+
+  const loadBookedSessions = async () => {
+    try {
+      const response = await userService.getCurrentUser();
+
+      if (response.ok) {
+        const data = await response.json();
+        const sessions = data.sessions;
+        setBookedSessions(sessions);
+        setError("");
+      } else {
+        setError("Nem sikerült betölteni a foglalásokat");
+      }
+    } catch (error) {
+      console.error("Error loading booked sessions:", error);
+      setError("Hálózati hiba történt");
+    }
   };
 
   useEffect(() => {
     loadAllData();
   }, []);
 
-  // Polling - frissítés 30 másodpercenként
+  // Polling - frissítés 30 másodpercenként (elérhető és foglalt időpontok)
   usePolling(() => {
     loadAvailableSessions();
+    loadBookedSessions();
+    setLastUpdate(new Date());
   }, 30000);
 
   const handleBookSession = async (sessionId) => {
@@ -103,6 +127,38 @@ function MentorsPage() {
         <small>(Automatikus frissítés 30 másodpercenként)</small>
       </p>
 
+      {bookedSessions.length > 0 && (
+        <section className="booked-sessions">
+          <h2>Foglalt időpontjaim</h2>
+          {bookedSessions.length === 0 ? (
+            <p>Jelenleg nincs foglalásod.</p>
+          ) : (
+            <div className="sessions-grid">
+              {bookedSessions.map((item) => {
+                const s = item.session;
+                return (
+                  <div key={item.id} className="session-card booked">
+                    <div className="session-info">
+                      <h3>{s.mentorName}</h3>
+                      <p>
+                        <strong>Időpont:</strong>{" "}
+                        {formatDateTime(s.sessionDate)}
+                      </p>
+                      <p>
+                        <strong>Állapot:</strong> {item.status}
+                      </p>
+                      <p>
+                        <strong>Költség:</strong> {item.creditsPaid} kredit
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
+
       <section className="available-sessions">
         <h2>Elérhető időpontok</h2>
         {availableSessions.length === 0 ? (
@@ -127,7 +183,8 @@ function MentorsPage() {
                     <strong>Szakterület:</strong> {session.expertise}
                   </p>
                   <p>
-                    <strong>Szint:</strong> {getExperienceLabel(session.experienceLevel)}
+                    <strong>Szint:</strong>{" "}
+                    {getExperienceLabel(session.experienceLevel)}
                   </p>
                 </div>
                 <div className="session-actions">
