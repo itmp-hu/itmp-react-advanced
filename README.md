@@ -34,3 +34,8 @@ Az oktatást vezető mentorként **Mrakovics Olivér** Európa- és világbajnok
 | 13:30 - 14:00     | 3. modul elméleti áttekintés és demó - Sisák Zoltán, Mrakovics Olivér |
 | 14:00 - 14:45     | 3. modul workshop - kiscsoportos, mentorált gyakorlat                 |
 | _14:45 - 15:00_   | _Kérdések és válaszok, napzárás_                                      |
+
+### A MITS projekthez tartozó anyagok elérése
+A projekthez tartozó repository-t azok számára is elérhetővé tettük, akik nem tudtak részt venni az online képzésen, illetve nem volt lehetőségük a MITS platformra regisztrálni.
+
+https://github.com/marketable-it-skills/s17-es2025-training-hu-module_d-interactive-frontend-using-an-api
